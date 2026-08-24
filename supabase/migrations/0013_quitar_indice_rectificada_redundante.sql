@@ -1,0 +1,29 @@
+-- ---------------------------------------------------------------------
+-- 0013 · Fuera el índice duplicado de `factura_rectificada_id`
+--
+-- La tabla `facturas` tenía DOS índices sobre la misma columna y con el
+-- mismo predicado:
+--
+--   idx_facturas_rectificada                     (normal, del schema.sql
+--                                                 original)
+--   idx_facturas_una_rectificativa_por_original  (ÚNICO, añadido en la
+--                                                 migración 0010)
+--
+-- Los dos son:
+--   ON facturas (factura_rectificada_id) WHERE factura_rectificada_id IS NOT NULL
+--
+-- Un índice único sirve para buscar exactamente igual que uno normal
+-- —además de imponer la unicidad—, así que el de 0010 ya cubre todo lo
+-- que hacía el viejo: buscar la rectificativa de una factura dada.
+-- Tener los dos no acelera ninguna consulta y obliga a Postgres a
+-- mantener dos árboles en cada insert y en cada update de `facturas`.
+--
+-- Se quita el NO único y se deja el único, que es el que además impide
+-- que una misma factura acabe con dos rectificativas vivas.
+--
+-- No hay nada en el código que dependa de este nombre: los índices no
+-- se nombran en las consultas, y `idx_facturas_rectificada` no aparece
+-- en ningún fichero del repositorio (comprobado antes de escribir esto).
+-- ---------------------------------------------------------------------
+
+drop index if exists idx_facturas_rectificada;

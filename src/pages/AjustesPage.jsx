@@ -1,0 +1,38 @@
+import { useEffect, useState } from 'react'
+import Cabecera from '../components/layout/Cabecera'
+import Aviso from '../components/ui/Aviso'
+import DatosFiscales from '../features/ajustes/DatosFiscales'
+import ConexionGoogle from '../features/ajustes/ConexionGoogle'
+import ConexionWhatsApp from '../features/ajustes/ConexionWhatsApp'
+import { leerResultadoConexion } from '../services/googleCalendar'
+
+/* Ajustes de la consulta.
+
+   Los datos fiscales van los primeros a propósito: sin ellos no se
+   puede emitir ni una factura, y el botón «Emitir» trae aquí cuando
+   faltan. Debajo, las conexiones con Google Calendar y WhatsApp. */
+export default function AjustesPage() {
+  const [aviso, setAviso] = useState(null)
+
+  // Al volver de Google, la URL trae el resultado (?google=ok, …)
+  useEffect(() => {
+    setAviso(leerResultadoConexion())
+  }, [])
+
+  return (
+    <>
+      <Cabecera
+        titulo="Ajustes"
+        subtitulo="Datos de facturación y conexiones con otras aplicaciones."
+      />
+
+      <div className="space-y-4">
+        <DatosFiscales alAvisar={setAviso} />
+        <ConexionGoogle alAvisar={setAviso} />
+        <ConexionWhatsApp alAvisar={setAviso} />
+      </div>
+
+      <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
+    </>
+  )
+}

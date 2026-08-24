@@ -1,0 +1,6 @@
+# La app es una SPA: cualquier ruta la resuelve React Router dentro de
+# index.html. Sin esto, entrar directamente en una dirección concreta
+# devuelve 404 en Netlify, y el enlace de firma del consentimiento
+# (/consentimiento?token=...) llega SIEMPRE así: desde el correo del
+# paciente, sin pasar por la portada.
+/*    /index.html   200

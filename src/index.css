@@ -1,0 +1,150 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   SISTEMA DE DISEÑO — Psicofactur
+   Paleta reducida y cálida: crema de fondo, verde eucalipto de
+   marca y tres acentos sólo para estados. Nada más.
+   Cambiando estos tokens cambia el aspecto de TODA la app.
+   ============================================================ */
+@theme {
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
+  /* Neutros cálidos (fondo, bordes, texto) */
+  --color-crema: #f7f5f2;
+  --color-tinta: #2e2b28;
+  --color-tinta-suave: #6b655d;
+  --color-tinta-tenue: #9a938a;
+  --color-borde: #e8e3dc;
+  --color-borde-fuerte: #d7d0c6;
+
+  /* Marca: verde eucalipto */
+  --color-marca-50: #eef4f2;
+  --color-marca-100: #dce9e6;
+  --color-marca-200: #bcd5cf;
+  --color-marca-300: #93bab1;
+  --color-marca-400: #6c9b90;
+  --color-marca-500: #4f7c74;
+  --color-marca-600: #3f655e;
+  --color-marca-700: #34534e;
+  --color-marca-800: #2b4340;
+
+  /* Acentos de estado (sólo para badges y avisos) */
+  --color-verde: #3f8f6c;
+  --color-verde-suave: #e7f3ee;
+  --color-ambar: #c07c22;
+  --color-ambar-suave: #fbf0e0;
+  --color-rojo: #bd5a4c;
+  --color-rojo-suave: #fbeae7;
+  --color-malva: #7f6ea3;
+  --color-malva-suave: #f0edf7;
+  --color-azul: #4a7fa8;
+  --color-azul-suave: #e8f0f6;
+
+  /* Sombras suaves, nada de cajas duras */
+  --shadow-suave: 0 1px 2px rgba(46, 43, 40, 0.04), 0 2px 8px rgba(46, 43, 40, 0.05);
+  --shadow-elevada: 0 4px 16px rgba(46, 43, 40, 0.1), 0 1px 3px rgba(46, 43, 40, 0.06);
+
+  --radius-xl2: 1.125rem;
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Un punto más grande en escritorio: se lee todo el día */
+  @media (min-width: 768px) {
+    html {
+      font-size: 17px;
+    }
+  }
+
+  body {
+    background-color: var(--color-crema);
+    color: var(--color-tinta);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* Foco visible y amable para navegación por teclado */
+  :focus-visible {
+    outline: 2px solid var(--color-marca-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+/* Área segura del iPhone (barra de gestos) */
+@utility pb-segura {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+@utility pt-segura {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Punto "vivo": indica que el estado se actualiza solo (WhatsApp) */
+@utility punto-vivo {
+  position: relative;
+}
+@keyframes latido {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.75;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.latido::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: currentColor;
+  animation: latido 2s cubic-bezier(0.3, 0, 0.4, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .latido::after {
+    animation: none;
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.aparecer {
+  animation: aparecer 0.18s ease-out both;
+}
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.subir {
+  animation: subir 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

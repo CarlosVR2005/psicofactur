@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+dev-dist
+*.local
+.DS_Store
+supabase/.temp
+
+# Variables de entorno: nunca al repositorio (usa .env.example como plantilla)
+.env
+.env.*
+!.env.example
