@@ -135,7 +135,10 @@ export default function CalendarioPage() {
         : `${fechaCorta(dias[0])} – ${fechaCorta(dias[6])}`
       : mesYAno(referencia)
 
-  const citasDelDiaElegido = citasPorDia.get(diaElegido) ?? []
+  // Una cita cancelada no ocupa sitio: su hora se ve como hueco libre
+  const citasDelDiaElegido = (citasPorDia.get(diaElegido) ?? []).filter(
+    (c) => c.confirmacion !== 'cancelada',
+  )
 
   return (
     <>

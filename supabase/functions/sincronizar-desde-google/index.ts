@@ -210,12 +210,16 @@ async function intentarImportar(
 
   /* Duplicados: en su calendario cada sesión aparece dos veces (se lo
      hace otra aplicación que usa para llevar la facturación). Si ya hay
-     una cita a esa misma hora, este evento es la copia: se descarta. */
+     una cita VIVA a esa misma hora, este evento es la copia: se descarta.
+     Las canceladas no cuentan: se quedan en esa hora a propósito (lista
+     de espera, rastro de facturas/WhatsApp) y no deben tapar una cita
+     nueva que ocupe el mismo hueco que dejó libre la cancelada. */
   const { data: yaHayCita } = await admin
     .from('citas')
     .select('id')
     .eq('psicologa_id', psicologaId)
     .eq('fecha_hora', inicio.toISOString())
+    .neq('estado_confirmacion', 'cancelada')
     .limit(1)
     .maybeSingle()
   if (yaHayCita) return

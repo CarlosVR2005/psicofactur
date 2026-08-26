@@ -10,7 +10,10 @@ export default function VistaSemana({ dias, citasPorDia, alPulsarCita, alAnadirE
     <div className="grid gap-3 md:grid-cols-7 md:gap-2.5">
       {dias.map((dia) => {
         const clave = aClave(dia)
-        const citas = citasPorDia.get(clave) ?? []
+        // Una cita cancelada no ocupa sitio: su hora se ve como hueco libre
+        const citas = (citasPorDia.get(clave) ?? []).filter(
+          (c) => c.confirmacion !== 'cancelada',
+        )
         const hoyEs = esHoy(clave)
         const finde = dia.getDay() === 0 || dia.getDay() === 6
 
