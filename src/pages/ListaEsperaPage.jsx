@@ -138,17 +138,16 @@ export default function ListaEsperaPage() {
               <h2 className="mb-2 flex items-center gap-2 font-semibold text-tinta">
                 <HeartHandshake className="size-5 text-verde" strokeWidth={1.9} />
                 {huecosConGente.length === 1
-                  ? 'Se ha liberado un hueco'
-                  : `Se han liberado ${huecosConGente.length} huecos`}
+                  ? 'Hay un hueco libre'
+                  : `Hay ${huecosConGente.length} huecos libres`}
               </h2>
               <p className="mb-3 text-sm text-tinta-suave">
-                Estas citas se han cancelado y hay gente en la lista a la que le
-                encajan.
+                Hay gente en la lista a la que le encajan estos huecos.
               </p>
               <Card className="divide-y divide-borde overflow-hidden border-verde/30">
                 {huecosConGente.map((hueco) => (
                   <HuecoLiberado
-                    key={hueco.citaId}
+                    key={hueco.id}
                     hueco={hueco}
                     esperas={esperas}
                     alDarCita={darCita}

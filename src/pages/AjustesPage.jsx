@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Cabecera from '../components/layout/Cabecera'
 import Aviso from '../components/ui/Aviso'
 import DatosFiscales from '../features/ajustes/DatosFiscales'
+import HorarioTrabajo from '../features/ajustes/HorarioTrabajo'
 import ConexionGoogle from '../features/ajustes/ConexionGoogle'
 import ConexionWhatsApp from '../features/ajustes/ConexionWhatsApp'
 import { leerResultadoConexion } from '../services/googleCalendar'
@@ -28,6 +29,7 @@ export default function AjustesPage() {
 
       <div className="space-y-4">
         <DatosFiscales alAvisar={setAviso} />
+        <HorarioTrabajo alAvisar={setAviso} />
         <ConexionGoogle alAvisar={setAviso} />
         <ConexionWhatsApp alAvisar={setAviso} />
       </div>

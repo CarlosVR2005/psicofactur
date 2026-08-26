@@ -1,6 +1,11 @@
 import { Plus } from 'lucide-react'
 import CitaChip from './CitaChip'
-import { duracionLegible, minutosEntre, sumarMinutos } from '../../lib/fechas'
+import {
+  duracionLegible,
+  horasEnPuntoEntre,
+  minutosEntre,
+  sumarMinutos,
+} from '../../lib/fechas'
 
 /* ================================================================
    Las citas de un día, con los ratos libres a la vista.
@@ -67,20 +72,6 @@ function huecosEntre(anterior, siguiente) {
   }
 
   return [{ desde: finAnterior, hasta: siguiente.hora, minutos }]
-}
-
-/** Cada hora en punto ('HH:00') que cabe entera dentro de [desde, hasta). */
-function horasEnPuntoEntre(desde, hasta) {
-  const [hDesde, mDesde] = desde.split(':').map(Number)
-  const [hHasta, mHasta] = hasta.split(':').map(Number)
-  const primeraHora = mDesde === 0 ? hDesde : hDesde + 1
-  const ultimaHora = mHasta === 0 ? hHasta - 1 : hHasta - 1
-
-  const horas = []
-  for (let h = primeraHora; h <= ultimaHora; h++) {
-    horas.push(`${String(h).padStart(2, '0')}:00`)
-  }
-  return horas
 }
 
 /** '10:00' -> '10h' */

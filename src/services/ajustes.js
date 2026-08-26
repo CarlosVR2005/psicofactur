@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { horarioVacio } from '../lib/espera'
 import { ejecutar, exito, psicologaActualId } from './base'
 
 /* Ajustes de la consulta que viven en la fila de `psicologas`.
@@ -152,4 +153,57 @@ export async function guardarPreferenciasWhatsApp(preferencias) {
 
 export function olvidarConfigWhatsApp() {
   cacheWhatsapp = null
+}
+
+
+/* ================================================================
+   HORARIO DE TRABAJO
+
+   Para cuándo trabaja la psicóloga, día a día. Lo usa la lista de
+   espera para calcular huecos libres de verdad (ver `lib/espera.js`),
+   no sólo los que deja una cita cancelada.
+
+   Sin capas que proteger aquí: a diferencia de Google y WhatsApp, este
+   JSONB no lo escribe nadie más que esta pantalla, así que se
+   sobrescribe entero al guardar.
+   ================================================================ */
+
+let cacheHorario = null
+
+/** Horario de trabajo de la psicóloga con sesión abierta */
+export async function getHorarioTrabajo({ refrescar = false } = {}) {
+  if (cacheHorario && !refrescar) return exito(cacheHorario)
+
+  const id = await psicologaActualId()
+  if (!id) return exito(horarioVacio())
+
+  const { data, error } = await ejecutar(
+    supabase.from('psicologas').select('horario_trabajo').eq('id', id).single(),
+    'cargar el horario de trabajo',
+  )
+  if (error) return { data: null, error }
+  cacheHorario = { ...horarioVacio(), ...(data.horario_trabajo ?? {}) }
+  return exito(cacheHorario)
+}
+
+export async function guardarHorarioTrabajo(horario) {
+  const id = await psicologaActualId()
+  if (!id) return exito(horario)
+
+  const { data, error } = await ejecutar(
+    supabase
+      .from('psicologas')
+      .update({ horario_trabajo: horario })
+      .eq('id', id)
+      .select('horario_trabajo')
+      .single(),
+    'guardar el horario de trabajo',
+  )
+  if (error) return { data: null, error }
+  cacheHorario = { ...horarioVacio(), ...(data.horario_trabajo ?? {}) }
+  return exito(cacheHorario)
+}
+
+export function olvidarHorarioTrabajo() {
+  cacheHorario = null
 }

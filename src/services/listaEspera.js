@@ -1,4 +1,7 @@
 import { supabase } from '../lib/supabase'
+import { aClave } from '../lib/fechas'
+import { esFuturo, horarioConfigurado, huecosDeHorario } from '../lib/espera'
+import { getHorarioTrabajo } from './ajustes'
 import { ejecutar, exito, fallo, psicologaActualId } from './base'
 
 /* ================================================================
@@ -80,13 +83,25 @@ function deFilaHueco(fila) {
   const f = new Date(fila.fecha_hora)
   const dos = (n) => String(n).padStart(2, '0')
   return {
-    citaId: fila.id,
+    id: fila.id,
     fecha: `${f.getFullYear()}-${dos(f.getMonth() + 1)}-${dos(f.getDate())}`,
     hora: `${dos(f.getHours())}:${dos(f.getMinutes())}`,
     duracion: fila.duracion_minutos,
-    tipo: fila.tipo,
     // De quién era la cita que se canceló
     cancelPor: fila.paciente?.nombre ?? 'Paciente',
+  }
+}
+
+/** Igual que `deFilaHueco`, pero para pasarle la cita entera a `huecosDeHorario` */
+function deFilaCita(fila) {
+  const f = new Date(fila.fecha_hora)
+  const dos = (n) => String(n).padStart(2, '0')
+  return {
+    fecha: `${f.getFullYear()}-${dos(f.getMonth() + 1)}-${dos(f.getDate())}`,
+    hora: `${dos(f.getHours())}:${dos(f.getMinutes())}`,
+    duracion: fila.duracion_minutos,
+    estado: fila.estado_confirmacion,
+    pacienteNombre: fila.paciente?.nombre ?? 'Paciente',
   }
 }
 
@@ -132,7 +147,53 @@ export async function getHuecosLiberados({ dias = 90 } = {}) {
   const enPie = data.filter((c) => c.estado_confirmacion !== 'cancelada')
 
   return exito(
-    canceladas.filter((c) => !enPie.some((o) => seSolapan(c, o))).map(deFilaHueco),
+    canceladas
+      .filter((c) => !enPie.some((o) => seSolapan(c, o)))
+      .map(deFilaHueco)
+      .filter((h) => esFuturo(h.fecha, h.hora)),
+  )
+}
+
+/**
+ * Los huecos libres de verdad: si hay horario de trabajo configurado
+ * (Ajustes), cualquier rato de la jornada sin cita puesta encima — se
+ * haya cancelado algo ahí o no se haya ocupado nunca. Sin horario
+ * configurado, sigue como antes: sólo lo que deja una cancelación.
+ *
+ * @param dias hasta dónde mirar hacia delante
+ */
+export async function getHuecosLibres({ dias = 90 } = {}) {
+  const { data: horario, error: errorHorario } = await getHorarioTrabajo()
+  if (errorHorario) return { data: null, error: errorHorario }
+
+  if (!horarioConfigurado(horario)) return getHuecosLiberados({ dias })
+
+  const desde = new Date()
+  desde.setHours(0, 0, 0, 0)
+  const hasta = new Date(desde)
+  hasta.setDate(hasta.getDate() + dias)
+
+  const { data, error } = await ejecutar(
+    supabase
+      .from('citas')
+      .select(
+        `id, fecha_hora, duracion_minutos, estado_confirmacion,
+         paciente:pacientes!citas_paciente_id_fkey (nombre)`,
+      )
+      .gte('fecha_hora', desde.toISOString())
+      .lte('fecha_hora', hasta.toISOString())
+      .order('fecha_hora'),
+    'buscar los huecos libres',
+  )
+  if (error) return { data: null, error }
+
+  return exito(
+    huecosDeHorario({
+      horario,
+      citas: data.map(deFilaCita),
+      desde: aClave(desde),
+      hasta: aClave(hasta),
+    }),
   )
 }
 

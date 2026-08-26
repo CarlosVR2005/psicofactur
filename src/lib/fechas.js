@@ -116,6 +116,20 @@ export function minutosEntre(desde, hasta) {
   return h2 * 60 + m2 - (h1 * 60 + m1)
 }
 
+/** Cada hora en punto ('HH:00') que cabe entera dentro de [desde, hasta). */
+export function horasEnPuntoEntre(desde, hasta) {
+  const [hDesde, mDesde] = desde.split(':').map(Number)
+  const [hHasta, mHasta] = hasta.split(':').map(Number)
+  const primeraHora = mDesde === 0 ? hDesde : hDesde + 1
+  const ultimaHora = mHasta === 0 ? hHasta - 1 : hHasta - 1
+
+  const horas = []
+  for (let h = primeraHora; h <= ultimaHora; h++) {
+    horas.push(`${String(h).padStart(2, '0')}:00`)
+  }
+  return horas
+}
+
 /** 90 -> '1 h 30 min'. Para los huecos de la agenda. */
 export function duracionLegible(minutos) {
   const h = Math.floor(minutos / 60)

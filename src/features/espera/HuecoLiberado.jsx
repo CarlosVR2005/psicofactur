@@ -5,13 +5,14 @@ import Boton from '../../components/ui/Boton'
 import { FRANJAS, esperasDe } from '../../lib/espera'
 import { etiquetaDia, haceRato, sumarMinutos } from '../../lib/fechas'
 
-/* Un hueco que se ha quedado libre porque el paciente canceló, con la
-   gente de la lista a la que le encaja.
+/* Un hueco libre —por una cancelación o simplemente porque nunca se
+   ocupó, según el horario de trabajo— con la gente de la lista a la que
+   le encaja.
 
-   Es la pantalla que justifica toda la función: aquí es donde una
-   cancelación deja de ser una pérdida y pasa a ser un hueco para el
-   siguiente. Por eso las personas van con su botón al lado — de ver el
-   hueco a dar la cita hay un toque. */
+   Es la pantalla que justifica toda la función: aquí es donde un rato
+   libre deja de pasar desapercibido y se convierte en una cita para
+   alguien que esperaba. Por eso las personas van con su botón al lado —
+   de ver el hueco a dar la cita hay un toque. */
 export default function HuecoLiberado({ hueco, esperas, alDarCita }) {
   const candidatos = esperasDe(hueco, esperas)
 
@@ -26,7 +27,7 @@ export default function HuecoLiberado({ hueco, esperas, alDarCita }) {
           {hueco.hora} — {sumarMinutos(hueco.hora, hueco.duracion)}
         </p>
         <Badge tono="neutro" tamano="sm">
-          Canceló {primerNombre(hueco.cancelPor)}
+          {hueco.cancelPor ? `Canceló ${primerNombre(hueco.cancelPor)}` : 'Hueco libre'}
         </Badge>
       </div>
 

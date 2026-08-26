@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getHuecosLiberados, getListaEspera } from '../services/listaEspera'
+import { getHuecosLibres, getListaEspera } from '../services/listaEspera'
 
 /* La cola y los huecos libres van SIEMPRE juntos: por separado ninguno
    de los dos dice nada. Un hueco sin saber quién lo quiere no sirve, y
@@ -12,7 +12,7 @@ export function useListaEspera() {
 
   const recargar = useCallback(async () => {
     setCargando(true)
-    const [cola, libres] = await Promise.all([getListaEspera(), getHuecosLiberados()])
+    const [cola, libres] = await Promise.all([getListaEspera(), getHuecosLibres()])
     setError(cola.error ?? libres.error)
     if (cola.data) setEsperas(cola.data)
     if (libres.data) setHuecos(libres.data)

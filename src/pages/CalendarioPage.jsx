@@ -212,9 +212,9 @@ export default function CalendarioPage() {
         </Link>
       )}
 
-      {/* Una cancelación ha dejado libre un hueco que alguien esperaba.
-          Es el aviso que hace que la lista de espera sirva de algo: si
-          no se ve aquí, no se entera nadie. */}
+      {/* Hay un hueco libre (por cancelación o dentro del horario) que le
+          encaja a alguien de la lista de espera. Es el aviso que hace que
+          la lista sirva de algo: si no se ve aquí, no se entera nadie. */}
       {huecosConGente.length > 0 && (
         <Link
           to="/espera"
@@ -223,8 +223,8 @@ export default function CalendarioPage() {
           <HeartHandshake className="size-5 shrink-0 text-verde" strokeWidth={1.9} />
           <p className="min-w-0 flex-1 text-sm text-tinta">
             {huecosConGente.length === 1
-              ? 'Se ha liberado un hueco y hay alguien esperándolo.'
-              : `Se han liberado ${huecosConGente.length} huecos y hay gente esperándolos.`}
+              ? 'Hay un hueco libre y alguien esperándolo.'
+              : `Hay ${huecosConGente.length} huecos libres y gente esperándolos.`}
           </p>
           <span className="shrink-0 text-sm font-medium text-verde underline">
             Ver quién lo quiere
