@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
-import { Plus, UserRoundSearch, Users } from 'lucide-react'
+import { ArrowDownUp, Plus, UserRoundSearch, Users } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Buscador from '../components/ui/Buscador'
 import Boton from '../components/ui/Boton'
 import Segmentado from '../components/ui/Segmentado'
 import EstadoVacio from '../components/ui/EstadoVacio'
 import AvisoError from '../components/ui/AvisoError'
+import Aviso from '../components/ui/Aviso'
 import { EsqueletoLista } from '../components/ui/Cargando'
 import PacienteCard from '../features/pacientes/PacienteCard'
 import PacienteModal from '../features/pacientes/PacienteModal'
+import ImportarExportarModal from '../features/pacientes/ImportarExportarModal'
 import { usePacientes } from '../hooks/usePacientes'
 import { normalizar } from '../lib/formato'
 
@@ -25,6 +27,8 @@ export default function PacientesPage() {
 
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [traspasoAbierto, setTraspasoAbierto] = useState(false)
+  const [aviso, setAviso] = useState(null)
 
   const resultados = useMemo(() => {
     const q = normalizar(busqueda.trim())
@@ -50,9 +54,24 @@ export default function PacientesPage() {
             : `${activos} ${activos === 1 ? 'paciente' : 'pacientes'} en la consulta`
         }
         accion={
-          <Boton icono={Plus} onClick={() => setModalAbierto(true)}>
-            Nuevo paciente
-          </Boton>
+          <div className="flex items-center gap-2">
+            {/* Traspasar la lista es cosa de un día (al llegar y al irse),
+                así que va discreto al lado de la acción de todos los días */}
+            <Boton
+              variante="secundario"
+              icono={ArrowDownUp}
+              onClick={() => setTraspasoAbierto(true)}
+              title="Importar pacientes de otro programa o exportar los tuyos"
+              aria-label="Importar y exportar pacientes"
+            >
+              {/* En el móvil sólo el icono: la fila se comparte con «Nuevo
+                  paciente», que es la acción de verdad de esta pantalla */}
+              <span className="hidden sm:inline">Importar / Exportar</span>
+            </Boton>
+            <Boton icono={Plus} onClick={() => setModalAbierto(true)}>
+              Nuevo paciente
+            </Boton>
+          </div>
         }
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -116,6 +135,15 @@ export default function PacientesPage() {
         alCerrar={() => setModalAbierto(false)}
         alGuardar={aplicarCambio}
       />
+
+      <ImportarExportarModal
+        abierto={traspasoAbierto}
+        alCerrar={() => setTraspasoAbierto(false)}
+        alRecargar={recargar}
+        alAvisar={setAviso}
+      />
+
+      <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
     </>
   )
 }

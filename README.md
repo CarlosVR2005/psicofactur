@@ -69,11 +69,17 @@ src/
 │   ├─ fechas.js          calendario en español
 │   ├─ espera.js          cuándo un hueco liberado le sirve a quien espera
 │   ├─ consentimiento.js  el texto legal que firma el paciente, con VERSIÓN
+│   ├─ csv.js             leer y escribir CSV (separador, comillas, BOM)
+│   ├─ xlsx.js            leer un Excel .xlsx sin librerías (ZIP + XML)
+│   ├─ pacientesCsv.js    traspaso de pacientes: abrir el archivo venga
+│   │                     como venga, alias de columnas, fechas y
+│   │                     teléfonos de cualquier programa, duplicados
 │   └─ formato.js         €, teléfono, DNI, búsqueda sin tildes
 ├─ services/              ACCESO A DATOS (lo único que habla con Supabase)
 │   ├─ base.js            patrón { data, error } y traducción de errores
 │   ├─ pacientes.js       getPacientes · getPaciente · crearPaciente ·
-│   │                     actualizarPaciente · cambiarActivo
+│   │                     actualizarPaciente · cambiarActivo ·
+│   │                     crearPacientesEnLote · completarPacientesEnLote
 │   ├─ citas.js           getCitas · getCitasDePaciente · crearCita ·
 │   │                     actualizarCita · eliminarCita · suscribirCitas
 │   ├─ facturas.js        getFacturas · getFacturasDePaciente ·
@@ -106,8 +112,8 @@ src/
 │                         RutaProtegida
 ├─ features/
 │   ├─ pacientes/         PacienteCard · PacienteModal · DatoFicha ·
-│   │                     ConsentimientoCard · ConsentimientoBadge ·
-│   │                     FirmaModal
+│   │                     ImportarExportarModal · ConsentimientoCard ·
+│   │                     ConsentimientoBadge · FirmaModal
 │   ├─ consentimiento/    LienzoFirma (el <canvas>) · TextoLegal
 │   │                     (lo que ve el PACIENTE, sin sesión)
 │   ├─ agenda/            VistaSemana · VistaMes · CitaChip · CitaModal ·
@@ -712,6 +718,70 @@ pasar por la portada. Para eso están `public/_redirects` (Netlify) y
 > lo revise quien lleve la protección de datos de la consulta: los plazos de
 > conservación y los encargados del tratamiento dependen de con quién se haya
 > firmado contrato.
+
+## Importar y exportar pacientes
+
+En _Pacientes_, al lado de «Nuevo paciente», hay un botón **Importar /
+Exportar**. Resuelve los dos días raros de la vida de una consulta: el primero,
+cuando la lista está todavía en el programa anterior o en un Excel, y el día en
+que quiera llevársela a otro sitio. Los datos son suyos.
+
+**Entran dos formatos: el Excel de verdad (`.xlsx`) y el CSV.** Se distinguen
+por los primeros bytes del archivo, no por la extensión, porque renombrar un
+CSV a `.xlsx` es un clásico y el error que saldría entonces no lo entendería
+nadie.
+
+- `src/lib/csv.js` se ocupa de las cuatro trampas de siempre — el separador (un
+  Excel español exporta con `;`), las comillas, los saltos de línea dentro de un
+  campo y el BOM sin el cual Excel enseña «LucÃ­a» — y reintenta en
+  `windows-1252` si el archivo viene de un programa antiguo de Windows.
+- `src/lib/xlsx.js` **lee el `.xlsx` sin ninguna librería.** Un Excel moderno es
+  un ZIP con XML dentro, y descomprimir —lo único que parecía necesitar una
+  dependencia— ya lo trae el navegador: `DecompressionStream('deflate-raw')`
+  (Safari desde iOS 16.4). Lee la primera hoja **visible**, deshace las
+  entidades XML y convierte las fechas, que en Excel son un número y sólo se
+  saben fecha mirando el ESTILO de la celda (`xl/styles.xml`). Se prefirió esto
+  a SheetJS porque la versión que queda en npm está abandonada y con
+  vulnerabilidades conocidas —la buena sólo se distribuye desde su CDN— y porque
+  pesa más de 400 KB, más que toda la aplicación junta.
+
+El `.xls` viejo (Excel 97, formato binario) **no** se lee: la pantalla dice cómo
+guardarlo como `.xlsx` o CSV. Los mensajes de error de estos dos módulos van
+marcados con `amable: true` cuando están escritos para leerse en pantalla; el
+resto se queda en la consola y arriba sale una frase genérica.
+
+**Nada se guarda al elegir el archivo.** Primero se enseña qué se ha entendido:
+de qué hoja se ha leído, cuántos son nuevos, cuántos ya están, qué columna es
+cada cosa y qué líneas convendría revisar. Sólo entonces aparece el botón de confirmar. Meter 300
+fichas equivocadas se deshace de una en una.
+
+- **Los nombres de columna se adivinan.** Cada programa llama a lo mismo de una
+  manera («Telf.», «Móvil», «Phone», «Apellido 1»), así que hay una lista de
+  alias por campo en `src/lib/pacientesCsv.js`. Cuando la adivinanza falla, la
+  ventana deja corregir la correspondencia a mano.
+- **Se traduce lo que venga:** `15/03/1984`, `1984-03-15`, el `03/15/1984`
+  americano y el `30756` con el que Excel guarda las fechas por dentro;
+  `+34 600 11 22 33` → `600112233`; `60,00 €` → `60`. Lo que no se entiende se
+  deja vacío y se avisa, en vez de inventarlo.
+- **Un DNI con la letra cambiada se importa igual, pero avisando** (con la
+  letra correcta, que `lib/nif.js` sabe calcular). Es un dato de ella, no de la
+  aplicación; pero con la letra mal Hacienda rechazaría la factura.
+- **Duplicados:** es el mismo paciente si coincide el DNI; si no hay DNI, el
+  teléfono; y si tampoco, el nombre. Vale también entre líneas del propio
+  archivo, que suelen venir con repetidos. A los que ya existen sólo se les
+  **rellenan los huecos** (un correo que faltaba): lo que ya está escrito en la
+  aplicación NO se pisa nunca.
+- **La importación puede fallar a medias** —300 fichas y el wifi de una
+  consulta— así que `crearPacientesEnLote` va de cien en cien y devuelve
+  siempre lo que sí entró junto al error. La pantalla dice «se han guardado 180
+  de 300» y basta con volver a importar el mismo archivo: los 180 ya se
+  reconocen como repetidos.
+
+Al exportar sale un CSV (que Excel abre de un doble clic) con las mismas
+cabeceras que se reconocen al importar, así que **el archivo que sale vuelve a
+entrar sin tocar nada**. Lleva sólo las
+fichas (no las citas, ni las facturas, ni los consentimientos firmados) y son
+datos de salud identificables: la propia ventana lo recuerda.
 
 ## Capa de servicios
 
