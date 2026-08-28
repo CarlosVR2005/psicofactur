@@ -56,15 +56,48 @@ export async function enviarConsentimiento(pacienteId) {
     if (cuerpo?.sin_email) resultado.error.sinEmail = true
     if (cuerpo?.ya_firmado) resultado.error.yaFirmado = true
     if (cuerpo?.configuracion_incompleta) resultado.error.configuracionIncompleta = true
+    if (cuerpo?.faltan_progenitores) resultado.error.faltanProgenitores = true
 
     return resultado
   }
 
+  /* `envios` es una entrada por firmante: para un adulto, una; para un
+     menor de 16, una por progenitor. `aviso` avisa de un solo tutor. */
   return exito({
-    estado: data?.estado ?? 'PENDIENTE',
+    envios: Array.isArray(data?.envios) ? data.envios : [],
     fechaEnvio: data?.fecha_envio ?? new Date().toISOString(),
-    destinatario: data?.destinatario ?? '',
+    aviso: data?.aviso ?? null,
   })
+}
+
+/**
+ * Los firmantes del consentimiento de un paciente, con su estado. Sin el
+ * trazo de la firma (decenas de KB): eso se pide con
+ * `getFirmaConsentimiento` sólo cuando ella quiere verlo.
+ */
+export async function getFirmantes(pacienteId) {
+  const { data, error } = await ejecutar(
+    supabase
+      .from('consentimiento_firmantes')
+      .select(
+        'id, rol, estado, destinatario_correo, destinatario_nombre, fecha_envio, fecha_firma',
+      )
+      .eq('paciente_id', pacienteId)
+      .order('rol'),
+    'cargar los firmantes del consentimiento',
+  )
+  if (error) return { data: null, error }
+  return exito(
+    data.map((f) => ({
+      id: f.id,
+      rol: f.rol,
+      estado: f.estado,
+      destinatarioCorreo: f.destinatario_correo ?? '',
+      destinatarioNombre: f.destinatario_nombre ?? '',
+      fechaEnvio: f.fecha_envio ?? '',
+      fechaFirma: f.fecha_firma ?? '',
+    })),
+  )
 }
 
 /**
@@ -98,10 +131,17 @@ export async function getConsentimiento(token) {
   return exito({
     valido: true,
     version: data.version ?? '',
+    rol: data.rol ?? 'PACIENTE',
     paciente: {
       nombre: data.paciente?.nombre ?? '',
       dni: data.paciente?.dni ?? '',
       correo: data.paciente?.correo ?? '',
+    },
+    /* Con qué prerrellenar el formulario. Para un progenitor es su
+       propio nombre; su DNI lo escribe él. */
+    firmante: {
+      nombre: data.firmante?.nombre ?? data.paciente?.nombre ?? '',
+      dni: data.firmante?.dni ?? '',
     },
     consulta: {
       nombre: data.consulta?.nombre ?? '',
@@ -144,39 +184,41 @@ export async function firmarConsentimiento({
     firmado: true,
     fechaFirma: data.fecha_firma ?? new Date().toISOString(),
     version: data.version ?? '',
+    rol: data.rol ?? 'PACIENTE',
   })
 }
 
 /**
- * La firma registrada de un paciente, para poder verla desde su ficha.
+ * La firma registrada de UN firmante, para poder verla desde la ficha.
  *
- * Va aparte de `getPaciente` a propósito: un PNG en base64 son unas
- * decenas de KB, y arrastrarlo en el listado de pacientes sería mover
- * megabytes cada vez que ella abre Pacientes para nada.
+ * Va aparte de `getFirmantes` a propósito: un PNG en base64 son unas
+ * decenas de KB, y no tiene sentido moverlo hasta que ella quiere
+ * mirarlo.
  */
-export async function getFirmaConsentimiento(pacienteId) {
+export async function getFirmaConsentimiento(firmanteId) {
   const { data, error } = await ejecutar(
     supabase
-      .from('pacientes')
+      .from('consentimiento_firmantes')
       .select(
-        'nombre, consentimiento_firma_data, consentimiento_fecha_firma, consentimiento_nombre, consentimiento_dni, consentimiento_ip, consentimiento_version',
+        'rol, firma_data, fecha_firma, nombre, dni, ip, version, destinatario_nombre, pacientes(nombre)',
       )
-      .eq('id', pacienteId)
+      .eq('id', firmanteId)
       .single(),
     'cargar la firma del consentimiento',
   )
   if (error) return { data: null, error }
 
   return exito({
-    firma: data.consentimiento_firma_data ?? '',
-    fechaFirma: data.consentimiento_fecha_firma ?? '',
-    /* El de la ficha y el que declaró al firmar. Se enseñan los dos
-       cuando no coinciden: puede ser un apellido que faltaba, o que
-       firmara un tutor. */
-    nombreFicha: data.nombre ?? '',
-    nombreFirmante: data.consentimiento_nombre ?? '',
-    dni: data.consentimiento_dni ?? '',
-    ip: data.consentimiento_ip ?? '',
-    version: data.consentimiento_version ?? '',
+    rol: data.rol ?? 'PACIENTE',
+    firma: data.firma_data ?? '',
+    fechaFirma: data.fecha_firma ?? '',
+    /* El nombre del paciente en la ficha y el que declaró quien firmó.
+       Se enseñan los dos cuando no coinciden: un apellido que faltaba,
+       o que firmara un tutor. */
+    nombreFicha: data.pacientes?.nombre ?? '',
+    nombreFirmante: data.nombre ?? data.destinatario_nombre ?? '',
+    dni: data.dni ?? '',
+    ip: data.ip ?? '',
+    version: data.version ?? '',
   })
 }

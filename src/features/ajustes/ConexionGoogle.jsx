@@ -176,7 +176,8 @@ export default function ConexionGoogle({ alAvisar }) {
             <p className="min-w-0 flex-1 text-sm text-tinta-suave">
               Lo que hagas en Google Calendar llega aquí solo cada 10 minutos. La primera
               vez, pulsa <strong>Importar agenda</strong> para traerte también las citas
-              que ya tenías antes de conectar.
+              que ya tenías antes de conectar: revisa desde un año antes de hoy hasta un
+              año después.
             </p>
             <div className="flex shrink-0 items-center gap-1">
               <Boton
