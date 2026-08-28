@@ -13,7 +13,10 @@ import {
   NotebookPen,
   Pencil,
   Phone,
+  ShieldAlert,
   Sprout,
+  Trash2,
+  Users,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Boton from '../components/ui/Boton'
@@ -24,6 +27,7 @@ import Cargando from '../components/ui/Cargando'
 import AvisoError from '../components/ui/AvisoError'
 import DatoFicha from '../features/pacientes/DatoFicha'
 import PacienteModal from '../features/pacientes/PacienteModal'
+import EliminarPacienteModal from '../features/pacientes/EliminarPacienteModal'
 import ConsentimientoCard from '../features/pacientes/ConsentimientoCard'
 import CitaModal from '../features/agenda/CitaModal'
 import TipoCitaBadge from '../features/agenda/TipoCitaBadge'
@@ -34,6 +38,7 @@ import { useFacturas } from '../hooks/useFacturas'
 import { cambiarActivo } from '../services/pacientes'
 import { aClave, edad, etiquetaDia, fechaNumerica, hoy, MESES } from '../lib/fechas'
 import { euros, eurosCorto, telefono } from '../lib/formato'
+import { esMenorDeEdad, firmanLosProgenitores, progenitoresDe } from '../lib/menores'
 
 export default function PacienteDetallePage() {
   const { id } = useParams()
@@ -47,6 +52,7 @@ export default function PacienteDetallePage() {
   const [confirmarArchivo, setConfirmarArchivo] = useState(false)
   const [archivando, setArchivando] = useState(false)
   const [errorAccion, setErrorAccion] = useState(null)
+  const [eliminarAbierto, setEliminarAbierto] = useState(false)
 
   if (cargando) return <Cargando texto="Cargando la ficha…" />
 
@@ -67,6 +73,8 @@ export default function PacienteDetallePage() {
   }
 
   const anos = paciente.fechaNacimiento ? edad(paciente.fechaNacimiento) : null
+  const menor = esMenorDeEdad(paciente.fechaNacimiento)
+  const progenitores = progenitoresDe(paciente)
   const inicio = paciente.inicioTerapia
   const claveHoy = aClave(hoy())
   // `citas` viene de más reciente a más antigua
@@ -108,10 +116,16 @@ export default function PacienteDetallePage() {
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {!paciente.activo && <Badge tono="neutro">Archivado</Badge>}
-              {anos !== null && (
-                <Badge tono="marca" tamano="sm">
-                  {anos} años
+              {menor ? (
+                <Badge tono="ambar" tamano="sm" icono={ShieldAlert}>
+                  Menor de edad{anos !== null && ` · ${anos} años`}
                 </Badge>
+              ) : (
+                anos !== null && (
+                  <Badge tono="marca" tamano="sm">
+                    {anos} años
+                  </Badge>
+                )
               )}
               <Badge tono="neutro" tamano="sm">
                 {eurosCorto(paciente.precioSesion)} por sesión
@@ -139,6 +153,7 @@ export default function PacienteDetallePage() {
 
       {/* Datos de contacto y económicos */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
+       <div className="space-y-4">
         <Card className="p-5 sm:p-6">
           <h2 className="mb-4 font-semibold text-tinta">Datos de contacto</h2>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -189,10 +204,87 @@ export default function PacienteDetallePage() {
           </div>
         </Card>
 
+        {(menor || progenitores.length > 0) && (
+          <Card className="p-5 sm:p-6">
+            <h2 className="mb-1 flex items-center gap-2 font-semibold text-tinta">
+              <Users className="size-4.5 text-tinta-tenue" strokeWidth={1.9} />
+              Progenitores o tutores
+            </h2>
+            <p className="mb-4 text-sm text-tinta-suave">
+              {firmanLosProgenitores(paciente.fechaNacimiento)
+                ? 'Son ellos quienes firman el consentimiento y la cláusula de datos.'
+                : 'Contacto de la familia del paciente.'}
+            </p>
+
+            {progenitores.length === 0 ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
+                <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
+                <p>
+                  Es un paciente menor de edad y no hay ningún progenitor
+                  apuntado.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setEditando(true)}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Añádelos en la ficha
+                  </button>{' '}
+                  para poder mandarles el consentimiento.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {progenitores.map((p) => (
+                  <div key={p.rol}>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
+                      {p.indice === 1
+                        ? 'Primer progenitor o tutor'
+                        : 'Segundo progenitor o tutor'}
+                    </p>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <DatoFicha icono={Users} etiqueta="Nombre" valor={p.nombre} />
+                      <DatoFicha icono={IdCard} etiqueta="DNI" valor={p.dni} />
+                      <DatoFicha
+                        icono={Phone}
+                        etiqueta="Teléfono"
+                        valor={p.telefono ? telefono(p.telefono) : ''}
+                        href={p.telefono ? `tel:+34${p.telefono}` : undefined}
+                      />
+                      <DatoFicha
+                        icono={Mail}
+                        etiqueta="Correo"
+                        valor={p.correo}
+                        href={p.correo ? `mailto:${p.correo}` : undefined}
+                      />
+                    </div>
+                  </div>
+                ))}
+                {menor && progenitores.some((p) => !p.correo) && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
+                    <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
+                    <p>
+                      Falta el correo de algún progenitor.{' '}
+                      <button
+                        type="button"
+                        onClick={() => setEditando(true)}
+                        className="font-semibold underline underline-offset-2"
+                      >
+                        Complétalo en la ficha
+                      </button>
+                      : sin correo no se le puede mandar el consentimiento.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+       </div>
+
         <div className="space-y-4">
           <ConsentimientoCard
             paciente={paciente}
-            alCambiar={setPaciente}
+            alRefrescar={recargar}
             alEditarFicha={() => setEditando(true)}
           />
 
@@ -270,28 +362,48 @@ export default function PacienteDetallePage() {
             )}
           </Card>
 
-          {/* Archivar */}
-          <Card className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
-            <div className="min-w-0 flex-1">
-              <h2 className="font-semibold text-tinta">
-                {paciente.activo ? 'Archivar paciente' : 'Paciente archivado'}
-              </h2>
-              <p className="mt-0.5 text-sm text-tinta-suave">
-                {paciente.activo
-                  ? 'Deja de aparecer en el listado, pero no se borra nada.'
-                  : 'No aparece en el listado habitual. Puedes reactivarlo cuando quieras.'}
-              </p>
+          {/* Archivar / eliminar */}
+          <Card className="divide-y divide-borde p-0">
+            <div className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-tinta">
+                  {paciente.activo ? 'Archivar paciente' : 'Paciente archivado'}
+                </h2>
+                <p className="mt-0.5 text-sm text-tinta-suave">
+                  {paciente.activo
+                    ? 'Deja de aparecer en el listado, pero no se borra nada.'
+                    : 'No aparece en el listado habitual. Puedes reactivarlo cuando quieras.'}
+                </p>
+              </div>
+              <Boton
+                variante={paciente.activo ? 'peligro' : 'secundario'}
+                icono={paciente.activo ? Archive : ArchiveRestore}
+                onClick={() =>
+                  paciente.activo ? setConfirmarArchivo(true) : alternarArchivo()
+                }
+                disabled={archivando}
+              >
+                {paciente.activo ? 'Archivar' : 'Reactivar'}
+              </Boton>
             </div>
-            <Boton
-              variante={paciente.activo ? 'peligro' : 'secundario'}
-              icono={paciente.activo ? Archive : ArchiveRestore}
-              onClick={() =>
-                paciente.activo ? setConfirmarArchivo(true) : alternarArchivo()
-              }
-              disabled={archivando}
-            >
-              {paciente.activo ? 'Archivar' : 'Reactivar'}
-            </Boton>
+
+            <div className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-tinta">Eliminar paciente</h2>
+                <p className="mt-0.5 text-sm text-tinta-suave">
+                  Borra la ficha para siempre. Sólo para fichas creadas por
+                  error: si tiene facturas, no se puede.
+                </p>
+              </div>
+              <Boton
+                variante="peligro"
+                tamano="sm"
+                icono={Trash2}
+                onClick={() => setEliminarAbierto(true)}
+              >
+                Eliminar
+              </Boton>
+            </div>
           </Card>
         </div>
       </div>
@@ -301,6 +413,27 @@ export default function PacienteDetallePage() {
         alCerrar={() => setEditando(false)}
         paciente={paciente}
         alGuardar={setPaciente}
+      />
+
+      <EliminarPacienteModal
+        abierto={eliminarAbierto}
+        alCerrar={() => setEliminarAbierto(false)}
+        paciente={paciente}
+        alArchivar={() => setConfirmarArchivo(true)}
+        alEliminado={({ citas }) =>
+          navegar('/pacientes', {
+            state: {
+              aviso: {
+                tipo: 'exito',
+                titulo: `Se ha eliminado a ${paciente.nombre}`,
+                detalle:
+                  citas > 0
+                    ? `Se han borrado también sus ${citas === 1 ? '1 cita' : `${citas} citas`}.`
+                    : undefined,
+              },
+            },
+          })
+        }
       />
 
       <CitaModal

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowDownUp, Plus, UserRoundSearch, Users } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Buscador from '../components/ui/Buscador'
@@ -29,6 +30,18 @@ export default function PacientesPage() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [traspasoAbierto, setTraspasoAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
+
+  /* Al volver de borrar una ficha, la pantalla de detalle deja el aviso
+     en `location.state`. Se recoge una vez y se limpia del historial
+     para que no reaparezca al recargar o al navegar atrás. */
+  const location = useLocation()
+  const navegar = useNavigate()
+  useEffect(() => {
+    if (location.state?.aviso) {
+      setAviso(location.state.aviso)
+      navegar(location.pathname, { replace: true, state: null })
+    }
+  }, [location, navegar])
 
   const resultados = useMemo(() => {
     const q = normalizar(busqueda.trim())

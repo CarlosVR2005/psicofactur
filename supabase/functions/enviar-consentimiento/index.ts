@@ -1,18 +1,24 @@
 /* ================================================================
    enviar-consentimiento
 
-   Le manda al paciente el enlace para leer y firmar el consentimiento
-   informado y la cláusula de protección de datos.
+   Le manda el enlace para leer y firmar el consentimiento informado y
+   la cláusula de protección de datos.
 
-   Del navegador se acepta SÓLO el id del paciente. La dirección de
-   destino se lee de su ficha con el RLS de la usuaria puesto, igual que
-   en `enviar-factura-email` y por lo mismo: si se aceptara del cliente,
-   el botón sería un formulario para mandar correos desde el dominio de
-   la consulta a donde a uno le apeteciera.
+   Quién lo recibe lo decide ESTA función, no el navegador, a partir de
+   la fecha de nacimiento del paciente:
 
-   El token se genera AQUÍ y no se devuelve nunca al navegador. La
-   pantalla no necesita el enlace —no hay nada que copiar y pegar— y
-   quien tenga el token puede firmar por el paciente.
+     · menor de 16  →  un enlace para cada progenitor con correo en la
+                       ficha. Firman por separado (Ley 41/2002).
+     · 16 o más     →  un enlace al propio paciente, como siempre.
+
+   Del navegador se acepta SÓLO el id del paciente. Los correos de
+   destino se leen de su ficha con el RLS de la usuaria puesto, por lo
+   mismo que en `enviar-factura-email`: si se aceptaran del cliente, el
+   botón sería un formulario para mandar correos desde el dominio de la
+   consulta a donde apeteciera.
+
+   Cada firmante es una fila de `consentimiento_firmantes` con su token.
+   El token se genera aquí y no se devuelve nunca.
    ================================================================ */
 
 import { json, respuestaPreflight } from '../_shared/cors.ts'
@@ -26,6 +32,7 @@ import {
 import {
   ASUNTO_CONSENTIMIENTO,
   enlaceDeFirma,
+  firmanLosProgenitores,
   htmlDelCorreo,
   nuevoToken,
   textoDelCorreo,
@@ -34,6 +41,12 @@ import {
 
 /** Un correo con pinta de correo. No valida que exista, sólo la forma. */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+interface Destino {
+  rol: 'PACIENTE' | 'PROGENITOR_1' | 'PROGENITOR_2'
+  correo: string
+  nombre: string
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return respuestaPreflight()
@@ -55,8 +68,6 @@ Deno.serve(async (req) => {
     )
   }
 
-  /* Sin dirección pública no hay enlace que mandar: el correo saldría
-     con un botón que no lleva a ninguna parte. Mejor no mandarlo. */
   if (!urlDeLaApp()) {
     return json(
       {
@@ -83,12 +94,13 @@ Deno.serve(async (req) => {
 
   const db = clienteDeUsuaria(req)
 
-  /* ---------- 1. El paciente, con el RLS de la usuaria ----------
-     Si no es suyo, esta consulta no lo encuentra. */
+  /* ---------- 1. El paciente, con el RLS de la usuaria ---------- */
   const { data: paciente, error: errorPaciente } = await db
     .from('pacientes')
     .select(
-      'id, nombre, correo, consentimiento_estado, consentimiento_token, consentimiento_fecha_envio',
+      `id, nombre, correo, fecha_nacimiento,
+       progenitor1_nombre, progenitor1_correo,
+       progenitor2_nombre, progenitor2_correo`,
     )
     .eq('id', pacienteId)
     .single()
@@ -97,39 +109,76 @@ Deno.serve(async (req) => {
     return json({ mensaje: 'No se ha encontrado ese paciente.' }, 404)
   }
 
-  /* ---------- 2. ¿Hay algo que mandar? ----------
-     Un consentimiento firmado no se vuelve a pedir: mandarlo otra vez
-     invitaría a firmar dos veces el mismo documento, y el registro que
-     vale es el primero. Para rehacerlo hace falta cambiar el texto y
-     subir su versión, que es otra conversación. */
-  if (paciente.consentimiento_estado === 'FIRMADO') {
+  /* ---------- 2. ¿A quién se le manda? ---------- */
+  const porProgenitores = firmanLosProgenitores(paciente.fecha_nacimiento)
+  const destinos: Destino[] = []
+  let aviso: string | null = null
+
+  if (porProgenitores) {
+    const progenitores: Array<[Destino['rol'], string, string]> = [
+      ['PROGENITOR_1', String(paciente.progenitor1_correo ?? '').trim(), String(paciente.progenitor1_nombre ?? '').trim()],
+      ['PROGENITOR_2', String(paciente.progenitor2_correo ?? '').trim(), String(paciente.progenitor2_nombre ?? '').trim()],
+    ]
+    for (const [rol, correo, nombre] of progenitores) {
+      if (correo && EMAIL.test(correo)) {
+        destinos.push({ rol, correo, nombre: nombre || 'Progenitor o tutor' })
+      }
+    }
+
+    if (destinos.length === 0) {
+      return json(
+        {
+          mensaje: `${paciente.nombre} es menor de 16 años: el consentimiento lo firman sus progenitores, y no hay ningún correo suyo en la ficha. Añádelos y vuelve a intentarlo.`,
+          sin_email: true,
+          faltan_progenitores: true,
+        },
+        400,
+      )
+    }
+    if (destinos.length === 1) {
+      aviso =
+        'Sólo hay un progenitor con correo en la ficha. El consentimiento de un menor lo tienen que firmar los dos: añade el correo del otro para mandárselo también.'
+    }
+  } else {
+    const correo = String(paciente.correo ?? '').trim()
+    if (!correo) {
+      return json(
+        {
+          mensaje: `${paciente.nombre} no tiene ningún correo en su ficha. Ponle uno y vuelve a intentarlo.`,
+          sin_email: true,
+        },
+        400,
+      )
+    }
+    if (!EMAIL.test(correo)) {
+      return json(
+        {
+          mensaje: `El correo que tiene ${paciente.nombre} en su ficha («${correo}») no parece válido. Revísalo.`,
+          sin_email: true,
+        },
+        400,
+      )
+    }
+    destinos.push({ rol: 'PACIENTE', correo, nombre: paciente.nombre })
+  }
+
+  /* ---------- 3. Los que ya firmaron no se vuelven a molestar ---------- */
+  const { data: firmantes } = await db
+    .from('consentimiento_firmantes')
+    .select('rol, estado')
+    .eq('paciente_id', paciente.id)
+
+  const yaFirmado = new Set(
+    (firmantes ?? []).filter((f) => f.estado === 'FIRMADO').map((f) => f.rol),
+  )
+
+  const pendientesDeEnviar = destinos.filter((d) => !yaFirmado.has(d.rol))
+
+  if (pendientesDeEnviar.length === 0) {
     return json(
       {
-        mensaje: `${paciente.nombre} ya firmó el consentimiento. No hace falta volver a mandárselo.`,
+        mensaje: `${paciente.nombre} ya tiene el consentimiento firmado. No hace falta volver a mandarlo.`,
         ya_firmado: true,
-      },
-      400,
-    )
-  }
-
-  /* ---------- 3. A dónde va ----------
-     De la ficha, nunca de lo que mande el navegador. */
-  const destino = String(paciente.correo ?? '').trim()
-
-  if (!destino) {
-    return json(
-      {
-        mensaje: `${paciente.nombre} no tiene ningún correo en su ficha. Ponle uno y vuelve a intentarlo.`,
-        sin_email: true,
-      },
-      400,
-    )
-  }
-  if (!EMAIL.test(destino)) {
-    return json(
-      {
-        mensaje: `El correo que tiene ${paciente.nombre} en su ficha («${destino}») no parece válido. Revísalo.`,
-        sin_email: true,
       },
       400,
     )
@@ -146,82 +195,103 @@ Deno.serve(async (req) => {
     psicologa?.razon_social || psicologa?.nombre || 'Tu psicóloga',
   ).trim()
 
-  /* ---------- 5. El token, ANTES de mandar el correo ----------
-     Al revés no se puede: si el correo saliera primero, el paciente
-     podría abrir el enlace antes de que exista en la base. Un token
-     nuevo cada vez, aunque sea un reenvío: el anterior deja de valer en
-     cuanto se sobreescribe, así que un correo viejo reenviado a un
-     tercero se queda muerto. */
-  const token = nuevoToken()
+  /* ---------- 5. Una fila y un correo por firmante ---------- */
   const enviadoEn = new Date().toISOString()
+  const envios: Array<{ rol: string; destinatario: string; ok: boolean; mensaje?: string }> = []
 
-  const anterior = {
-    consentimiento_estado: paciente.consentimiento_estado ?? 'NO_ENVIADO',
-    consentimiento_token: paciente.consentimiento_token ?? null,
-    consentimiento_fecha_envio: paciente.consentimiento_fecha_envio ?? null,
-  }
+  for (const destino of pendientesDeEnviar) {
+    const token = nuevoToken()
 
-  const { error: errorGuardar } = await db
-    .from('pacientes')
-    .update({
-      consentimiento_estado: 'PENDIENTE',
-      consentimiento_token: token,
-      consentimiento_fecha_envio: enviadoEn,
-    })
-    .eq('id', paciente.id)
+    // El token se guarda ANTES de mandar el correo: si saliera primero,
+    // el enlace podría abrirse antes de existir en la base.
+    const { error: errorGuardar } = await db
+      .from('consentimiento_firmantes')
+      .upsert(
+        {
+          paciente_id: paciente.id,
+          psicologa_id: psicologaId,
+          rol: destino.rol,
+          destinatario_correo: destino.correo,
+          destinatario_nombre: destino.nombre,
+          estado: 'PENDIENTE',
+          token,
+          fecha_envio: enviadoEn,
+          fecha_firma: null,
+          firma_data: null,
+          ip: null,
+          nombre: null,
+          dni: null,
+          version: null,
+        },
+        { onConflict: 'paciente_id,rol' },
+      )
 
-  if (errorGuardar) {
-    console.error('[Psicofactur] no se pudo guardar el token de consentimiento:', errorGuardar)
-    return json({ mensaje: 'No se ha podido preparar el enlace de firma. Inténtalo de nuevo.' }, 500)
-  }
-
-  /* ---------- 6. El correo ---------- */
-  const datosCorreo = {
-    nombrePaciente: paciente.nombre,
-    consulta,
-    enlace: enlaceDeFirma(token),
-  }
-
-  try {
-    await enviarCorreo({
-      para: destino,
-      paraNombre: paciente.nombre,
-      asunto: ASUNTO_CONSENTIMIENTO,
-      html: htmlDelCorreo(datosCorreo),
-      texto: textoDelCorreo(datosCorreo),
-      // Que el paciente pueda contestarle a ella, no al remitente técnico
-      responderA: psicologa?.email ?? null,
-    })
-  } catch (e) {
-    const fallo = e instanceof ErrorEmail ? e : null
-    console.error('[Psicofactur] no se pudo enviar el consentimiento:', fallo?.tecnico ?? e)
-
-    /* El correo no ha salido, así que la ficha no puede quedarse en
-       «esperando respuesta»: estaría esperando algo que nadie ha
-       recibido. Se deshace lo del paso 5 y la pantalla vuelve a
-       ofrecer el botón de enviar. */
-    const { error: errorDeshacer } = await db
-      .from('pacientes')
-      .update(anterior)
-      .eq('id', paciente.id)
-
-    if (errorDeshacer) {
-      console.error('[Psicofactur] token puesto pero correo no enviado:', errorDeshacer)
+    if (errorGuardar) {
+      console.error('[Psicofactur] no se pudo preparar el enlace de firma:', errorGuardar)
+      envios.push({
+        rol: destino.rol,
+        destinatario: destino.correo,
+        ok: false,
+        mensaje: 'No se ha podido preparar el enlace.',
+      })
+      continue
     }
 
-    const esCulpaNuestra =
-      fallo?.estadoHttp && fallo.estadoHttp >= 400 && fallo.estadoHttp < 500
+    const datosCorreo = {
+      nombrePaciente: paciente.nombre,
+      consulta,
+      enlace: enlaceDeFirma(token),
+      rol: destino.rol,
+    }
 
+    try {
+      await enviarCorreo({
+        para: destino.correo,
+        paraNombre: destino.nombre,
+        asunto: ASUNTO_CONSENTIMIENTO,
+        html: htmlDelCorreo(datosCorreo),
+        texto: textoDelCorreo(datosCorreo),
+        responderA: psicologa?.email ?? null,
+      })
+      envios.push({ rol: destino.rol, destinatario: destino.correo, ok: true })
+    } catch (e) {
+      const fallo = e instanceof ErrorEmail ? e : null
+      console.error('[Psicofactur] no se pudo enviar el consentimiento:', fallo?.tecnico ?? e)
+
+      /* El correo no ha salido: esta fila no puede quedarse «esperando
+         respuesta». Se borra el token para que un enlace que nadie ha
+         recibido no valga. */
+      await db
+        .from('consentimiento_firmantes')
+        .update({ token: null })
+        .eq('paciente_id', paciente.id)
+        .eq('rol', destino.rol)
+
+      envios.push({
+        rol: destino.rol,
+        destinatario: destino.correo,
+        ok: false,
+        mensaje: fallo?.mensaje ?? 'No se ha podido enviar el correo.',
+      })
+    }
+  }
+
+  const algunoOk = envios.some((e) => e.ok)
+  if (!algunoOk) {
     return json(
-      { mensaje: fallo?.mensaje ?? 'No se ha podido enviar el correo.' },
-      esCulpaNuestra ? 400 : 502,
+      {
+        mensaje:
+          envios[0]?.mensaje ?? 'No se ha podido enviar el consentimiento.',
+        envios,
+      },
+      502,
     )
   }
 
   return json({
     enviado: true,
-    estado: 'PENDIENTE',
-    destinatario: destino,
+    envios,
     fecha_envio: enviadoEn,
+    aviso,
   })
 })

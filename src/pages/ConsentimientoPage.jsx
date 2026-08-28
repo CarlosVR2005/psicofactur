@@ -17,6 +17,7 @@ import LienzoFirma from '../features/consentimiento/LienzoFirma'
 import TextoLegal from '../features/consentimiento/TextoLegal'
 import {
   DECLARACION,
+  declaracionProgenitor,
   documentoConsentimiento,
   errorDeDocumento,
   nombreDeLaConsulta,
@@ -138,8 +139,10 @@ export default function ConsentimientoPage() {
     }
     setEstado({ cargando: false, datos: data, error: null })
     if (data?.valido) {
-      setNombre(data.paciente.nombre ?? '')
-      setDni(data.paciente.dni ?? '')
+      /* Para un progenitor, sus propios datos (el servidor manda su
+         nombre y deja el DNI en blanco para que lo escriba él). */
+      setNombre(data.firmante?.nombre ?? '')
+      setDni(data.firmante?.dni ?? '')
     }
   }, [token])
 
@@ -149,6 +152,9 @@ export default function ConsentimientoPage() {
 
   const datos = estado.datos
   const consulta = datos?.valido ? nombreDeLaConsulta(datos.consulta) : ''
+  const esProgenitor = Boolean(datos?.valido) && datos.rol !== 'PACIENTE'
+  const nombreMenor = datos?.valido ? datos.paciente.nombre : ''
+  const declaracion = esProgenitor ? declaracionProgenitor(nombreMenor) : DECLARACION
   const secciones = useMemo(
     () => (datos?.valido ? documentoConsentimiento(datos.consulta) : []),
     [datos],
@@ -248,8 +254,18 @@ export default function ConsentimientoPage() {
         <div className="flex items-start gap-3 rounded-2xl bg-marca-50 px-4 py-3.5 text-sm leading-relaxed text-marca-700">
           <ShieldCheck className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
           <p>
-            Lee el documento, comprueba que tus datos están bien y fírmalo con el dedo
-            al final. Es el mismo papel que se firmaba en la consulta.
+            {esProgenitor ? (
+              <>
+                Estás firmando como padre, madre o tutor de{' '}
+                <strong>{nombreMenor}</strong>. Cada progenitor firma por su lado,
+                con su propio enlace. Lee el documento y fírmalo con el dedo al final.
+              </>
+            ) : (
+              <>
+                Lee el documento, comprueba que tus datos están bien y fírmalo con el
+                dedo al final. Es el mismo papel que se firmaba en la consulta.
+              </>
+            )}
           </p>
         </div>
 
@@ -305,7 +321,7 @@ export default function ConsentimientoPage() {
               onChange={(e) => setAcepto(e.target.checked)}
               className="mt-0.5 size-5 shrink-0 accent-[#4f7c74]"
             />
-            <span className="text-sm leading-relaxed text-tinta">{DECLARACION}</span>
+            <span className="text-sm leading-relaxed text-tinta">{declaracion}</span>
           </label>
 
           <div className="mt-5">

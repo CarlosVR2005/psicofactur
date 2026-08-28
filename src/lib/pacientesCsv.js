@@ -160,6 +160,77 @@ export const CAMPOS = [
     ayuda: '«Archivado» o «Inactivo» dan de alta la ficha ya archivada.',
     alias: ['estado', 'situacion', 'activo', 'status', 'active'],
   },
+  {
+    id: 'progenitor1Nombre',
+    etiqueta: 'Progenitor 1 · Nombre',
+    ayuda: 'Datos de los padres o tutores, para pacientes menores.',
+    alias: [
+      'progenitor 1 nombre', 'progenitor1 nombre', 'madre', 'nombre madre',
+      'nombre de la madre', 'tutor 1', 'tutor 1 nombre', 'padre madre 1',
+    ],
+  },
+  {
+    id: 'progenitor1Dni',
+    etiqueta: 'Progenitor 1 · DNI',
+    alias: [
+      'progenitor 1 dni', 'progenitor1 dni', 'dni madre', 'dni de la madre',
+      'dni tutor 1', 'nif madre',
+    ],
+  },
+  {
+    id: 'progenitor1Telefono',
+    etiqueta: 'Progenitor 1 · Teléfono',
+    alias: [
+      'progenitor 1 telefono', 'progenitor1 telefono', 'telefono madre',
+      'movil madre', 'telefono de la madre', 'telefono tutor 1',
+    ],
+  },
+  {
+    id: 'progenitor1Correo',
+    etiqueta: 'Progenitor 1 · Correo electrónico',
+    alias: [
+      'progenitor 1 correo', 'progenitor1 correo', 'email madre', 'correo madre',
+      'email de la madre', 'correo tutor 1', 'email tutor 1',
+    ],
+  },
+  {
+    id: 'progenitor2Nombre',
+    etiqueta: 'Progenitor 2 · Nombre',
+    alias: [
+      'progenitor 2 nombre', 'progenitor2 nombre', 'padre', 'nombre padre',
+      'nombre del padre', 'tutor 2', 'tutor 2 nombre', 'padre madre 2',
+    ],
+  },
+  {
+    id: 'progenitor2Dni',
+    etiqueta: 'Progenitor 2 · DNI',
+    alias: [
+      'progenitor 2 dni', 'progenitor2 dni', 'dni padre', 'dni del padre',
+      'dni tutor 2', 'nif padre',
+    ],
+  },
+  {
+    id: 'progenitor2Telefono',
+    etiqueta: 'Progenitor 2 · Teléfono',
+    alias: [
+      'progenitor 2 telefono', 'progenitor2 telefono', 'telefono padre',
+      'movil padre', 'telefono del padre', 'telefono tutor 2',
+    ],
+  },
+  {
+    id: 'progenitor2Correo',
+    etiqueta: 'Progenitor 2 · Correo electrónico',
+    alias: [
+      'progenitor 2 correo', 'progenitor2 correo', 'email padre', 'correo padre',
+      'email del padre', 'correo tutor 2', 'email tutor 2',
+    ],
+  },
+]
+
+/* Los ocho campos de progenitores, para no repetir la lista en cada sitio */
+const CAMPOS_PROGENITORES = [
+  'progenitor1Nombre', 'progenitor1Dni', 'progenitor1Telefono', 'progenitor1Correo',
+  'progenitor2Nombre', 'progenitor2Dni', 'progenitor2Telefono', 'progenitor2Correo',
 ]
 
 /** 'Fecha de Nacimiento ' -> 'fecha de nacimiento' */
@@ -380,6 +451,14 @@ export function analizarImportacion({ filas, mapa, existentes = [] }) {
       inicioTerapia,
       observaciones: dame('observaciones'),
       activo: activoDeTexto(dame('estado')),
+      progenitor1Nombre: dame('progenitor1Nombre'),
+      progenitor1Dni: dame('progenitor1Dni') ? normalizarNif(dame('progenitor1Dni')) : '',
+      progenitor1Telefono: telefonoDeTexto(dame('progenitor1Telefono')),
+      progenitor1Correo: dame('progenitor1Correo').toLowerCase(),
+      progenitor2Nombre: dame('progenitor2Nombre'),
+      progenitor2Dni: dame('progenitor2Dni') ? normalizarNif(dame('progenitor2Dni')) : '',
+      progenitor2Telefono: telefonoDeTexto(dame('progenitor2Telefono')),
+      progenitor2Correo: dame('progenitor2Correo').toLowerCase(),
     }
 
     if (!nombre) return { linea: i + 2, estado: 'sin-nombre', paciente, avisos }
@@ -417,7 +496,10 @@ export function analizarImportacion({ filas, mapa, existentes = [] }) {
  */
 export function camposQueCompletan(existente, entrante) {
   const relleno = {}
-  const textos = ['dni', 'telefono', 'correo', 'fechaNacimiento', 'inicioTerapia', 'observaciones']
+  const textos = [
+    'dni', 'telefono', 'correo', 'fechaNacimiento', 'inicioTerapia', 'observaciones',
+    ...CAMPOS_PROGENITORES,
+  ]
   for (const campo of textos) {
     if (!existente[campo] && entrante[campo]) relleno[campo] = entrante[campo]
   }
@@ -441,6 +523,14 @@ const COLUMNAS_EXPORTACION = [
   ['Inicio de la terapia', (p) => p.inicioTerapia],
   ['Observaciones', (p) => p.observaciones],
   ['Estado', (p) => (p.activo ? 'Activo' : 'Archivado')],
+  ['Progenitor 1 · Nombre', (p) => p.progenitor1Nombre],
+  ['Progenitor 1 · DNI', (p) => p.progenitor1Dni],
+  ['Progenitor 1 · Teléfono', (p) => p.progenitor1Telefono],
+  ['Progenitor 1 · Correo electrónico', (p) => p.progenitor1Correo],
+  ['Progenitor 2 · Nombre', (p) => p.progenitor2Nombre],
+  ['Progenitor 2 · DNI', (p) => p.progenitor2Dni],
+  ['Progenitor 2 · Teléfono', (p) => p.progenitor2Telefono],
+  ['Progenitor 2 · Correo electrónico', (p) => p.progenitor2Correo],
 ]
 
 /** Los pacientes en filas de CSV, con las cabeceras que se reconocen al volver */

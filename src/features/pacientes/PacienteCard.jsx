@@ -5,9 +5,11 @@ import Badge from '../../components/ui/Badge'
 import ConsentimientoBadge from './ConsentimientoBadge'
 import { eurosCorto, telefono } from '../../lib/formato'
 import { edad } from '../../lib/fechas'
+import { esMenorDeEdad } from '../../lib/menores'
 
 export default function PacienteCard({ paciente }) {
   const anos = paciente.fechaNacimiento ? edad(paciente.fechaNacimiento) : null
+  const menor = esMenorDeEdad(paciente.fechaNacimiento)
 
   return (
     <Link
@@ -24,6 +26,11 @@ export default function PacienteCard({ paciente }) {
           {!paciente.activo && (
             <Badge tono="neutro" tamano="sm">
               Archivado
+            </Badge>
+          )}
+          {menor && (
+            <Badge tono="ambar" tamano="sm" className="shrink-0">
+              Menor de edad
             </Badge>
           )}
         </p>

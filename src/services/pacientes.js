@@ -27,6 +27,17 @@ function deFila(fila) {
     activo: fila.activo,
     creadoEn: fila.created_at,
 
+    /* Progenitores o tutores del menor (migración 0021). Se usan para el
+       contacto y para mandarle el consentimiento a cada uno. */
+    progenitor1Nombre: fila.progenitor1_nombre ?? '',
+    progenitor1Dni: fila.progenitor1_dni ?? '',
+    progenitor1Correo: fila.progenitor1_correo ?? '',
+    progenitor1Telefono: fila.progenitor1_telefono ?? '',
+    progenitor2Nombre: fila.progenitor2_nombre ?? '',
+    progenitor2Dni: fila.progenitor2_dni ?? '',
+    progenitor2Correo: fila.progenitor2_correo ?? '',
+    progenitor2Telefono: fila.progenitor2_telefono ?? '',
+
     /* Consentimiento informado (migración 0018). El trazo de la firma NO
        está aquí: son decenas de KB por paciente y esto se carga para
        toda la lista. Se pide aparte con `getFirmaConsentimiento` cuando
@@ -42,20 +53,33 @@ function aFila(datos) {
   // Los campos de fecha vacíos tienen que ir como null: un '' rompe el tipo date
   const oNulo = (v) => (v === '' || v === undefined ? null : v)
 
+  const telefonoNulo = (v) => oNulo(v?.replace(/\s/g, ''))
+
   return {
     nombre: datos.nombre?.trim(),
     dni: oNulo(datos.dni?.trim()),
-    telefono: oNulo(datos.telefono?.replace(/\s/g, '')),
+    telefono: telefonoNulo(datos.telefono),
     correo: oNulo(datos.correo?.trim()),
     fecha_nacimiento: oNulo(datos.fechaNacimiento),
     precio_sesion: Number(datos.precioSesion ?? 0),
     inicio_terapia: oNulo(datos.inicioTerapia),
     observaciones: oNulo(datos.observaciones?.trim()),
+
+    progenitor1_nombre: oNulo(datos.progenitor1Nombre?.trim()),
+    progenitor1_dni: oNulo(datos.progenitor1Dni?.trim()),
+    progenitor1_correo: oNulo(datos.progenitor1Correo?.trim()),
+    progenitor1_telefono: telefonoNulo(datos.progenitor1Telefono),
+    progenitor2_nombre: oNulo(datos.progenitor2Nombre?.trim()),
+    progenitor2_dni: oNulo(datos.progenitor2Dni?.trim()),
+    progenitor2_correo: oNulo(datos.progenitor2Correo?.trim()),
+    progenitor2_telefono: telefonoNulo(datos.progenitor2Telefono),
   }
 }
 
 const COLUMNAS =
   'id, nombre, dni, telefono, correo, fecha_nacimiento, precio_sesion, inicio_terapia, observaciones, activo, created_at, ' +
+  'progenitor1_nombre, progenitor1_dni, progenitor1_correo, progenitor1_telefono, ' +
+  'progenitor2_nombre, progenitor2_dni, progenitor2_correo, progenitor2_telefono, ' +
   'consentimiento_estado, consentimiento_fecha_envio, consentimiento_fecha_firma'
 
 /**
@@ -121,6 +145,65 @@ export async function cambiarActivo(id, activo) {
   )
   if (error) return { data: null, error }
   return exito(deFila(data))
+}
+
+/* ================================================================
+   BORRADO DE VERDAD
+
+   Archivar es para el paciente que termina la terapia; esto es para la
+   ficha basura (un dedazo, una importación torcida) que no hay nada que
+   conservar. La regla de «con facturas no se borra» vive en la función
+   `eliminar_paciente` de la base (migración 0020), no aquí: entre que
+   ella abre el diálogo y confirma, la facturación automática podría
+   crear una factura.
+   ================================================================ */
+
+/** Cuánto histórico tiene la ficha, para avisar antes de borrarla. */
+export async function historialDePaciente(id) {
+  const [factura, cita] = await Promise.all([
+    supabase.from('facturas').select('id', { count: 'exact', head: true }).eq('paciente_id', id),
+    supabase.from('citas').select('id', { count: 'exact', head: true }).eq('paciente_id', id),
+  ])
+  if (factura.error || cita.error) {
+    return fallo(factura.error ?? cita.error, 'consultar el histórico del paciente')
+  }
+  return exito({ facturas: factura.count ?? 0, citas: cita.count ?? 0 })
+}
+
+/**
+ * Borra la ficha y, en cascada, sus citas y su lista de espera. Se niega
+ * si tiene alguna factura: en ese caso el error trae `tieneFacturas` para
+ * que la pantalla ofrezca archivar en su lugar.
+ *
+ * @returns {Promise<{data: { citas: number }|null, error: object|null}>}
+ */
+export async function eliminarPaciente(id) {
+  const { data, error } = await ejecutar(
+    supabase.rpc('eliminar_paciente', { p_id: id }),
+    'eliminar el paciente',
+  )
+  if (error) return { data: null, error }
+
+  if (!data?.borrado) {
+    if (data?.motivo === 'tiene_facturas') {
+      const n = data.facturas ?? 0
+      const resultado = fallo(
+        new Error('tiene facturas'),
+        'eliminar el paciente',
+        `Este paciente tiene ${n} ${n === 1 ? 'factura emitida' : 'facturas emitidas'}. ` +
+          'No se puede borrar porque las facturas hay que conservarlas. Archívalo en su lugar.',
+      )
+      resultado.error.tieneFacturas = true
+      return resultado
+    }
+    return fallo(
+      new Error(data?.motivo ?? 'desconocido'),
+      'eliminar el paciente',
+      'No se ha encontrado ese paciente. Puede que ya se haya borrado.',
+    )
+  }
+
+  return exito({ citas: data.citas ?? 0 })
 }
 
 /* ================================================================

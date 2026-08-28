@@ -24,7 +24,7 @@ import { errorDeNif, normalizarNif } from './nif'
    de con quién se haya firmado contrato.
    ================================================================ */
 
-export const VERSION_CONSENTIMIENTO = '2026-08'
+export const VERSION_CONSENTIMIENTO = '2026-09'
 
 export const ESTADOS = {
   NO_ENVIADO: 'NO_ENVIADO',
@@ -160,6 +160,18 @@ export function documentoConsentimiento(consulta) {
  */
 export const DECLARACION =
   'He leído y entiendo el consentimiento informado y la información sobre el tratamiento de mis datos personales. He podido preguntar lo que necesitaba y acepto iniciar la intervención psicológica en estas condiciones.'
+
+/**
+ * La que acepta un progenitor o tutor al firmar por un menor. El nombre
+ * del menor se mete con `%s` para que sea, literalmente, lo que se firma.
+ */
+export const DECLARACION_PROGENITOR =
+  'Como titular de la patria potestad o tutela de %s, he leído y entiendo el consentimiento informado y la información sobre el tratamiento de datos personales. He podido preguntar lo que necesitaba y autorizo la intervención psicológica del menor en estas condiciones.'
+
+/** '%s' -> nombre del menor. Si no hay nombre, queda una frase genérica. */
+export function declaracionProgenitor(nombreMenor) {
+  return DECLARACION_PROGENITOR.replace('%s', String(nombreMenor || 'la persona menor de edad').trim())
+}
 
 /**
  * Qué decirle a quien escribe mal su documento.

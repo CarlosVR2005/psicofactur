@@ -31,18 +31,24 @@ function Dato({ etiqueta, valor, ayuda }) {
   )
 }
 
-export default function FirmaModal({ abierto, alCerrar, paciente }) {
+const ROL_ETIQUETA = {
+  PACIENTE: 'Firmado por el paciente',
+  PROGENITOR_1: 'Firmado por el primer progenitor o tutor',
+  PROGENITOR_2: 'Firmado por el segundo progenitor o tutor',
+}
+
+export default function FirmaModal({ abierto, alCerrar, paciente, firmante }) {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!abierto || !paciente?.id) return
+    if (!abierto || !firmante?.id) return
     let vivo = true
 
     setCargando(true)
     setError(null)
-    getFirmaConsentimiento(paciente.id).then(({ data, error: fallo }) => {
+    getFirmaConsentimiento(firmante.id).then(({ data, error: fallo }) => {
       if (!vivo) return
       setDatos(data)
       setError(fallo)
@@ -52,7 +58,7 @@ export default function FirmaModal({ abierto, alCerrar, paciente }) {
     return () => {
       vivo = false
     }
-  }, [abierto, paciente?.id])
+  }, [abierto, firmante?.id])
 
   /* El nombre que escribió al firmar y el de la ficha no tienen por qué
      coincidir: puede haber firmado un tutor, o haber añadido el segundo
@@ -95,6 +101,12 @@ export default function FirmaModal({ abierto, alCerrar, paciente }) {
           ) : (
             <p className="text-tinta-suave">
               No hay ninguna firma guardada para este paciente.
+            </p>
+          )}
+
+          {datos?.rol && datos.rol !== 'PACIENTE' && (
+            <p className="rounded-xl bg-marca-50 px-3.5 py-2.5 text-sm text-marca-700">
+              {ROL_ETIQUETA[datos.rol] ?? 'Firmado por un progenitor o tutor'}
             </p>
           )}
 

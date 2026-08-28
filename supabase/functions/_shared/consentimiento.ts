@@ -19,7 +19,42 @@
  * Al cambiar el clausulado se sube la fecha en los DOS sitios. Lo ya
  * firmado conserva la suya.
  */
-export const VERSION_TEXTO = '2026-08'
+export const VERSION_TEXTO = '2026-09'
+
+/* ----------------------------------------------------------------
+   EDAD Y QUIÉN FIRMA
+
+   Dos edades que no son la misma. Se replican en `src/lib/menores.js`
+   (el navegador enseña el aviso y el formulario); aquí las usa el
+   servidor para decidir a quién le manda cada enlace, que es lo que no
+   se puede dejar en manos del cliente. Si se cambian, se cambian en los
+   dos sitios.
+
+   · 18 — mayoría de edad civil.
+   · 16 — consentimiento sanitario (Ley 41/2002, art. 9): por debajo,
+     firman los progenitores; entre 16 y 17, el propio paciente.
+   ---------------------------------------------------------------- */
+export const MAYORIA_EDAD = 18
+export const EDAD_CONSENTIMIENTO_SANITARIO = 16
+
+/** Años cumplidos a partir de 'YYYY-MM-DD', o null si no hay fecha. */
+export function edad(fechaNacimiento: string | null | undefined): number | null {
+  if (!fechaNacimiento) return null
+  const m = String(fechaNacimiento).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return null
+  const nac = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const hoy = new Date()
+  let e = hoy.getFullYear() - nac.getFullYear()
+  const mes = hoy.getMonth() - nac.getMonth()
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) e--
+  return e
+}
+
+/** ¿El consentimiento lo firman los progenitores y no el paciente? */
+export function firmanLosProgenitores(fechaNacimiento: string | null | undefined): boolean {
+  const e = edad(fechaNacimiento)
+  return e !== null && e < EDAD_CONSENTIMIENTO_SANITARIO
+}
 
 /**
  * Cuánto vale el enlace. Uno que no caduca nunca es un enlace que sigue
@@ -115,10 +150,36 @@ export interface DatosCorreo {
   nombrePaciente: string
   consulta: string
   enlace: string
+  /** 'PACIENTE' | 'PROGENITOR_1' | 'PROGENITOR_2'. Si es progenitor, el
+      correo se dirige al tutor y habla del menor en tercera persona. */
+  rol?: string
 }
 
-export function textoDelCorreo({ nombrePaciente, consulta, enlace }: DatosCorreo): string {
+function esProgenitor(rol?: string): boolean {
+  return rol === 'PROGENITOR_1' || rol === 'PROGENITOR_2'
+}
+
+export function textoDelCorreo({ nombrePaciente, consulta, enlace, rol }: DatosCorreo): string {
   const nombre = String(nombrePaciente ?? '').split(' ')[0]
+
+  if (esProgenitor(rol)) {
+    return [
+      'Hola:',
+      '',
+      `Como padre, madre o tutor de ${nombre}, necesito que firmes el consentimiento`,
+      'informado de la intervención psicológica y la cláusula de protección de datos.',
+      'Es un trámite de un minuto y se hace desde el propio móvil.',
+      '',
+      'Cada progenitor firma por su lado, con su propio enlace. Puedes leerlo y firmarlo aquí:',
+      enlace,
+      '',
+      `El enlace es personal y caduca a los ${DIAS_VALIDEZ} días. Si te caduca, dímelo y te mando otro.`,
+      '',
+      'Un saludo,',
+      consulta,
+    ].join('\n')
+  }
+
   return [
     `Hola ${nombre}:`,
     '',
@@ -136,23 +197,32 @@ export function textoDelCorreo({ nombrePaciente, consulta, enlace }: DatosCorreo
   ].join('\n')
 }
 
-export function htmlDelCorreo({ nombrePaciente, consulta, enlace }: DatosCorreo): string {
+export function htmlDelCorreo({ nombrePaciente, consulta, enlace, rol }: DatosCorreo): string {
   const nombre = escapar(String(nombrePaciente ?? '').split(' ')[0])
   const laConsulta = escapar(consulta)
   const url = escapar(enlace)
+  const paraProgenitor = esProgenitor(rol)
+
+  const saludo = paraProgenitor ? 'Hola:' : `Hola ${nombre}:`
+  const parrafoIntro = paraProgenitor
+    ? `Como padre, madre o tutor de <strong>${nombre}</strong>, necesito que firmes el
+       <strong>consentimiento informado</strong> de la intervenci&oacute;n y la cl&aacute;usula de
+       <strong>protecci&oacute;n de datos</strong>. Cada progenitor firma por su lado, con su
+       propio enlace.`
+    : `Antes de seguir con las sesiones necesito que firmes el
+       <strong>consentimiento informado</strong> y la cl&aacute;usula de
+       <strong>protecci&oacute;n de datos</strong>. Hace falta para poder atenderte y
+       para poder tratar tus datos conforme al RGPD.`
 
   return `
 <div style="background-color:#f7f5f2;padding:24px 12px">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background-color:#ffffff;border:1px solid #e8e3dc;border-radius:18px">
     <tr>
       <td style="padding:28px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#2e2b28">
-        <p style="margin:0 0 16px">Hola ${nombre}:</p>
+        <p style="margin:0 0 16px">${saludo}</p>
 
         <p style="margin:0 0 16px">
-          Antes de seguir con las sesiones necesito que firmes el
-          <strong>consentimiento informado</strong> y la cl&aacute;usula de
-          <strong>protecci&oacute;n de datos</strong>. Hace falta para poder atenderte y
-          para poder tratar tus datos conforme al RGPD.
+          ${parrafoIntro}
         </p>
 
         <p style="margin:0 0 24px;color:#6b655d">
