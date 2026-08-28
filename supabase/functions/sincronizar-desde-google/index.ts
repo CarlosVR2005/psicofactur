@@ -32,12 +32,14 @@ import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const API = 'https://www.googleapis.com/calendar/v3'
 
-/** Ventana de la primera pasada: lo de antes ya no interesa. */
-const DIAS_ATRAS_PRIMERA_VEZ = 30
+/* Ventana de la pasada completa (primera importación, re-escaneo a mano
+   o syncToken caducado): un año hacia atrás desde hoy. Se quiere el
+   histórico reciente de la consulta, no la agenda entera de siempre. */
+const DIAS_ATRAS = 365
 
-/* Y un tope hacia delante. Sin él, al expandir los eventos repetitivos
-   Google devuelve AÑOS de futuro y la bandeja se llena de citas de 2028
-   que no le sirven a nadie. */
+/* Y un año hacia delante. El tope hace falta porque, al expandir los
+   eventos repetitivos, Google devuelve AÑOS de futuro y la bandeja se
+   llenaría de citas de 2030 que no le sirven a nadie. */
 const DIAS_ADELANTE = 365
 
 /* Tope de altas por vuelta. La primera importación puede traer cientos
@@ -358,7 +360,7 @@ async function sincronizarUna(
       // Los filtros de la primera pasada van dentro del propio token.
       p.set('syncToken', syncToken)
     } else {
-      const desde = new Date(Date.now() - DIAS_ATRAS_PRIMERA_VEZ * 86400000)
+      const desde = new Date(Date.now() - DIAS_ATRAS * 86400000)
       const hasta = new Date(Date.now() + DIAS_ADELANTE * 86400000)
       p.set('timeMin', desde.toISOString())
       p.set('timeMax', hasta.toISOString())
