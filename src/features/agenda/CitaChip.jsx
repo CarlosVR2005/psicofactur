@@ -1,24 +1,37 @@
-import { CalendarCheck2, Video } from 'lucide-react'
+import { CalendarCheck2, Check, Video } from 'lucide-react'
 import { TIPOS_CITA } from '../../lib/tipos'
 import { sumarMinutos } from '../../lib/fechas'
 
 /* Una cita dentro del calendario. Barra de color a la izquierda = tipo.
+   El fondo y la etiqueta de la derecha = confirmación del paciente, para
+   ver de un vistazo quién viene sin abrir cada ficha:
+     verde  → confirmada
+     ámbar  → aún sin respuesta
+     tachada y gris → cancelada
    Pensado para pulsarse con el dedo: toda la tarjeta es el botón. */
 export default function CitaChip({ cita, alPulsar, compacto = false }) {
   const tipo = TIPOS_CITA[cita.tipo]
   const cancelada = cita.confirmacion === 'cancelada'
+  const confirmada = cita.confirmacion === 'confirmada'
+  const pendiente = cita.confirmacion === 'pendiente'
 
   // En las sesiones de pareja se ven los dos nombres
   const nombre = cita.acompananteNombre
     ? `${primerNombre(cita.pacienteNombre)} y ${primerNombre(cita.acompananteNombre)}`
     : cita.pacienteNombre
 
+  const fondo = cancelada
+    ? 'border-borde bg-white opacity-55'
+    : confirmada
+      ? 'border-verde/30 bg-verde-suave/40'
+      : pendiente
+        ? 'border-ambar/30 bg-ambar-suave/40'
+        : 'border-borde bg-white'
+
   return (
     <button
       onClick={() => alPulsar?.(cita)}
-      className={`group flex w-full items-stretch gap-2.5 overflow-hidden rounded-xl border border-borde bg-white text-left shadow-suave transition-colors hover:border-marca-200 hover:bg-marca-50/40 ${
-        cancelada ? 'opacity-55' : ''
-      }`}
+      className={`group flex w-full items-stretch gap-2.5 overflow-hidden rounded-xl border text-left shadow-suave transition-colors hover:border-marca-200 hover:bg-marca-50/40 ${fondo}`}
     >
       <span className={`w-1.5 shrink-0 ${tipo.barra}`} aria-hidden="true" />
       <span className={`min-w-0 flex-1 py-2 pr-2.5 ${compacto ? '' : 'sm:py-2.5'}`}>
@@ -41,12 +54,37 @@ export default function CitaChip({ cita, alPulsar, compacto = false }) {
             />
           )}
         </span>
-        <span
-          className={`mt-0.5 block truncate text-sm ${
-            cancelada ? 'text-tinta-tenue line-through' : 'text-tinta-suave'
-          }`}
-        >
-          {nombre}
+
+        <span className="mt-0.5 flex items-center gap-1.5">
+          <span
+            className={`min-w-0 flex-1 truncate text-sm ${
+              cancelada ? 'text-tinta-tenue line-through' : 'text-tinta-suave'
+            }`}
+          >
+            {nombre}
+          </span>
+
+          {confirmada && (
+            <span
+              className="flex shrink-0 items-center gap-1 text-xs font-medium text-verde"
+              title="El paciente ha confirmado"
+            >
+              <Check className="size-3.5" strokeWidth={2.8} />
+              {!compacto && 'Confirmada'}
+            </span>
+          )}
+          {pendiente && (
+            <span
+              className="flex shrink-0 items-center gap-1 text-xs font-medium text-ambar"
+              title="Pendiente de que el paciente confirme"
+            >
+              <span className="size-1.5 rounded-full bg-ambar" aria-hidden="true" />
+              {!compacto && 'Sin confirmar'}
+            </span>
+          )}
+          {cancelada && (
+            <span className="shrink-0 text-xs font-medium text-rojo">Cancelada</span>
+          )}
         </span>
       </span>
     </button>

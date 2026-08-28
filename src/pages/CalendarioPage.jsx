@@ -19,7 +19,7 @@ import VistaSemana from '../features/agenda/VistaSemana'
 import VistaMes from '../features/agenda/VistaMes'
 import ListaDelDia from '../features/agenda/ListaDelDia'
 import CitaModal from '../features/agenda/CitaModal'
-import { LeyendaTipos } from '../features/agenda/TipoCitaBadge'
+import { LeyendaConfirmacion, LeyendaTipos } from '../features/agenda/TipoCitaBadge'
 import { useCitas } from '../hooks/useCitas'
 import { useListaEspera } from '../hooks/useListaEspera'
 import { contarEventosPendientes } from '../services/eventosPendientes'
@@ -135,10 +135,8 @@ export default function CalendarioPage() {
         : `${fechaCorta(dias[0])} – ${fechaCorta(dias[6])}`
       : mesYAno(referencia)
 
-  // Una cita cancelada no ocupa sitio: su hora se ve como hueco libre
-  const citasDelDiaElegido = (citasPorDia.get(diaElegido) ?? []).filter(
-    (c) => c.confirmacion !== 'cancelada',
-  )
+  // Las canceladas se quedan a la vista (tachadas) para poder reprogramarlas
+  const citasDelDiaElegido = citasPorDia.get(diaElegido) ?? []
 
   return (
     <>
@@ -179,7 +177,7 @@ export default function CalendarioPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <LeyendaTipos />
+          {vista === 'semana' ? <LeyendaTipos conCancelada /> : <LeyendaConfirmacion />}
           <Link
             to="/espera"
             className="flex items-center gap-1.5 text-sm font-medium text-tinta-suave transition-colors hover:text-marca-600"

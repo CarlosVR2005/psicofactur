@@ -35,9 +35,13 @@ el `.env` hay que reiniciar `npm run dev`.
 - **Crear el primer usuario:** Supabase → Authentication → Users → _Add user_
   (marcando _Auto Confirm User_). Al guardarlo aparece sola su fila en
   `psicologas`.
-- `estado_confirmacion` de una cita **no se escribe desde el frontend**: lo pone
-  el trigger de `recordatorios_whatsapp` cuando llega la respuesta de WhatsApp.
-  La app sólo lo lee (y lo escucha por Realtime).
+- `estado_confirmacion` de una cita **casi nunca se escribe desde el frontend**:
+  lo pone la sincronización con Google leyendo el círculo de color que
+  **Confirmafy** antepone al título del evento (🟢 confirmada · 🟡 pendiente ·
+  🔴 cancelada), y antes lo ponía el trigger de `recordatorios_whatsapp`. La app
+  lo lee y lo escucha por Realtime. Única excepción: al **reprogramar** una cita
+  que el paciente había cancelado, el frontend la devuelve a `pendiente`
+  (`actualizarCita(..., { reactivar: true })`).
 
 Otros comandos:
 
@@ -278,17 +282,18 @@ Si mueve o borra una cita directamente en su Google Calendar, la app se entera
 sola. `sincronizar-desde-google` le pide a Google la lista de eventos con un
 `syncToken`: Google devuelve **sólo lo que ha cambiado** desde la última vez,
 más un token nuevo para la siguiente. La primera vez no hay token y se hace una
-pasada completa de los últimos 30 días; si el token se invalida, Google
-responde 410 y se repite la pasada entera.
+pasada completa de 90 días hacia atrás y un año hacia delante; si el token se
+invalida, Google responde 410 y se repite la pasada entera.
 
 Qué hace con cada cambio:
 
 | En Google | En la app |
 |---|---|
 | Cambió la hora o la duración | Se actualiza `fecha_hora` / `duracion_minutos` |
+| El título empieza por un círculo de **Confirmafy** (🟢/🟡/🔴) | Se pone `estado_confirmacion` a `confirmada` / `pendiente` / `cancelada`. El círculo no se toca nunca. Sin círculo, el estado se deja como estaba |
 | Se borró el evento | La cita pasa a **cancelada** y se suelta el `google_event_id`. No se borra la fila: hay facturas colgando de las citas |
 | Se convirtió en evento de todo el día | Se deja como está: una sesión sin hora no tiene sentido |
-| Evento nuevo que no salió de la app | Se intenta importar (ver abajo) |
+| Evento nuevo que no salió de la app | Se intenta importar (ver abajo) — salvo que lo lleve el círculo 🔴, que es un hueco libre, no una sesión |
 
 ### Importar lo que nace en Google
 
@@ -394,8 +399,10 @@ El modo manual **no desaparece**: si Meta falla, si un número no tiene
 WhatsApp o si el paciente contesta por teléfono, los botones ✓ y ✕ siguen
 ahí. Y los dos caminos escriben en el mismo sitio —
 `recordatorios_whatsapp.boton_pulsado` — de modo que es siempre el trigger
-`sync_estado_confirmacion` quien cambia el estado de la cita. El frontend
-nunca escribe `citas.estado_confirmacion`.
+`sync_estado_confirmacion` quien cambia el estado de la cita por esta vía. El
+frontend sólo escribe `citas.estado_confirmacion` al **reprogramar** una cita
+cancelada (la devuelve a `pendiente`); lo demás lo llevan este trigger y la
+sincronización con Google (los círculos de Confirmafy, ver arriba).
 
 ### Lo que hay que montar en Meta (una vez)
 
