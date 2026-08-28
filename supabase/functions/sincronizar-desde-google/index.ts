@@ -3,7 +3,8 @@
 
    Trae a la app lo que pasa en Google Calendar. Hace dos cosas:
 
-   1. ACTUALIZAR las citas que ya conoce (movida de hora, borrada).
+   1. ACTUALIZAR las citas que ya conoce (movida de hora, borrada, y el
+      círculo de color que le pone Confirmafy según responda el paciente).
    2. IMPORTAR los eventos que no conoce, porque en esta consulta MANDA
       GOOGLE: la psicóloga trabaja en su calendario de siempre y encima
       usa las páginas de reserva, así que hay pacientes que entran solos
@@ -33,9 +34,10 @@ import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 const API = 'https://www.googleapis.com/calendar/v3'
 
 /* Ventana de la pasada completa (primera importación, re-escaneo a mano
-   o syncToken caducado): un año hacia atrás desde hoy. Se quiere el
-   histórico reciente de la consulta, no la agenda entera de siempre. */
-const DIAS_ATRAS = 365
+   o syncToken caducado): 90 días hacia atrás desde hoy. Se quiere el
+   histórico reciente de la consulta, no un año entero de agenda vieja
+   (que además duplica fichas al chocar con lo que ya existe). */
+const DIAS_ATRAS = 90
 
 /* Y un año hacia delante. El tope hace falta porque, al expandir los
    eventos repetitivos, Google devuelve AÑOS de futuro y la bandeja se
@@ -80,6 +82,28 @@ function sinAdornos(texto: string): string {
 
 function sinTildes(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim()
+}
+
+/* -------- El circulo de color de Confirmafy -------- */
+
+/* Confirmafy —la app de confirmacion por WhatsApp que usa la psicologa—
+   antepone un circulo al titulo del evento segun lo que responda el
+   paciente: verde confirmada, amarillo aun sin responder, rojo cancelada.
+   Aqui solo se LEE, para poner el estado de la cita. El circulo NO se
+   toca nunca: lo gobierna Confirmafy, no nosotros. Una cita sin circulo
+   se queda con el estado que ya tenga. */
+const BOLA_ESTADO: Record<string, 'confirmada' | 'pendiente' | 'cancelada'> = {
+  '\u{1F7E2}': 'confirmada', // circulo verde
+  '\u{1F7E1}': 'pendiente', //  circulo amarillo
+  '\u{1F534}': 'cancelada', //  circulo rojo
+}
+
+/** El estado que pide el circulo del principio del titulo, o null si no lo lleva. */
+function estadoPorBola(titulo: unknown): 'confirmada' | 'pendiente' | 'cancelada' | null {
+  const primero = String(titulo ?? '')
+    .replace(/[\u{FE0F}\u{200D}\s]/gu, '')
+    .match(/^[\u{1F7E2}\u{1F7E1}\u{1F534}]/u)
+  return primero ? BOLA_ESTADO[primero[0]] : null
 }
 
 /** «304», «320 €»: lo que factura en el dia, que se apunta a si misma. */
@@ -164,6 +188,22 @@ async function aplicarCambio(
     return
   }
 
+  /* El círculo de Confirmafy: lo que ha respondido el paciente por
+     WhatsApp. Sólo se actúa si el evento LLEVA círculo; si no lo lleva
+     (cita recién creada, o que ella acaba de reprogramar en la app y por
+     eso el título ya no tiene círculo) se deja el estado como está. */
+  const estadoBola = estadoPorBola(evento.summary)
+  if (estadoBola && estadoBola !== cita.estado_confirmacion) {
+    const { error } = await admin
+      .from('citas')
+      .update({ estado_confirmacion: estadoBola })
+      .eq('id', cita.id)
+    if (!error) {
+      if (estadoBola === 'cancelada') resumen.cancelados++
+      else resumen.actualizados++
+    }
+  }
+
   // Si la convirtió en un evento de todo el día, se deja como está: una
   // sesión sin hora no tiene sentido en la agenda.
   if (!evento.start?.dateTime) return
@@ -196,6 +236,10 @@ async function intentarImportar(
 ): Promise<void> {
   // Borrado, de todo el día o sin hora: no es una sesión que importar
   if (evento.status === 'cancelled' || !evento.start?.dateTime) return
+
+  /* Confirmafy lo ha marcado en rojo: es una cita que el paciente ha
+     cancelado, o sea un hueco libre. No se da de alta como sesión. */
+  if (estadoPorBola(evento.summary) === 'cancelada') return
 
   // Ya se miró este evento alguna vez (pendiente, ignorado o resuelto)
   const { data: yaVisto } = await admin
@@ -296,6 +340,10 @@ async function intentarImportar(
     duracion_minutos: duracion,
     tipo: 'individual',
     google_event_id: evento.id,
+    // Si Confirmafy ya había escrito el círculo, se respeta. El rojo ya
+    // se ha descartado arriba, así que aquí sólo puede caer verde o
+    // amarillo; sin círculo, «pendiente» como siempre.
+    estado_confirmacion: estadoPorBola(evento.summary) ?? 'pendiente',
   })
 
   if (errorCita) {

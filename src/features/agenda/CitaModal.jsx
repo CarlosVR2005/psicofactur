@@ -59,6 +59,8 @@ export default function CitaModal({
 
   if (!datos) return null
 
+  const cancelada = cita?.confirmacion === 'cancelada'
+
   const cambiar = (campo, valor) => setDatos((d) => ({ ...d, [campo]: valor }))
 
   const cambiarTipo = (tipo) =>
@@ -75,7 +77,11 @@ export default function CitaModal({
     setGuardando(true)
 
     const { data, error: fallo, aviso } = cita
-      ? await actualizarCita(cita.id, datos)
+      ? await actualizarCita(cita.id, datos, {
+          // Reprogramar una cita que el paciente canceló: vuelve a la
+          // espera de que confirme la nueva hora
+          reactivar: cita.confirmacion === 'cancelada',
+        })
       : await crearCita(datos)
 
     setGuardando(false)
@@ -133,7 +139,13 @@ export default function CitaModal({
             form="form-cita"
             disabled={guardando || sinPacientes}
           >
-            {guardando ? 'Guardando…' : cita ? 'Guardar cambios' : 'Crear cita'}
+            {guardando
+              ? 'Guardando…'
+              : cita
+                ? cancelada
+                  ? 'Reprogramar cita'
+                  : 'Guardar cambios'
+                : 'Crear cita'}
           </Boton>
         </>
       }
@@ -296,9 +308,15 @@ export default function CitaModal({
                 <EstadoConfirmacionBadge estado={cita.confirmacion} tamano="sm" />
               </div>
               <p className="text-xs text-tinta-tenue">
-                Este estado lo cambia el paciente desde WhatsApp, no se edita a
-                mano.
+                Lo marca Confirmafy en tu Google Calendar según responda el
+                paciente: 🟢 confirmada · 🟡 pendiente · 🔴 cancelada.
               </p>
+              {cancelada && (
+                <p className="rounded-xl bg-rojo-suave px-3 py-2 text-xs leading-relaxed text-rojo">
+                  El paciente canceló esta cita. Cambia la fecha o la hora y pulsa
+                  «Reprogramar cita»: su hueco queda libre para la lista de espera.
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-medium text-tinta-suave">

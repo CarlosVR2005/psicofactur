@@ -20,7 +20,7 @@ export default function TipoCitaBadge({ tipo, tamano = 'sm' }) {
 }
 
 /** Leyenda de colores para la cabecera del calendario */
-export function LeyendaTipos({ className = '' }) {
+export function LeyendaTipos({ className = '', conCancelada = false }) {
   return (
     <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${className}`}>
       {Object.values(TIPOS_CITA).map((t) => (
@@ -30,6 +30,33 @@ export function LeyendaTipos({ className = '' }) {
         >
           <span className={`size-2.5 rounded-full ${t.punto}`} />
           {t.etiqueta}
+        </span>
+      ))}
+      {conCancelada && (
+        <span className="flex items-center gap-2 text-sm text-tinta-tenue">
+          <span className="size-2.5 rounded-full bg-transparent ring-1 ring-inset ring-rojo/60" />
+          <span className="line-through">Cancelada</span>
+        </span>
+      )}
+    </div>
+  )
+}
+
+/* Leyenda del mes: ahí el punto es la confirmación del paciente, no el
+   tipo de sesión. */
+const CONFIRMACION_LEYENDA = [
+  { clase: 'bg-verde', texto: 'Confirmada' },
+  { clase: 'bg-ambar', texto: 'Sin confirmar' },
+  { clase: 'bg-transparent ring-1 ring-inset ring-rojo/60', texto: 'Cancelada' },
+]
+
+export function LeyendaConfirmacion({ className = '' }) {
+  return (
+    <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${className}`}>
+      {CONFIRMACION_LEYENDA.map((c) => (
+        <span key={c.texto} className="flex items-center gap-2 text-sm text-tinta-suave">
+          <span className={`size-2.5 rounded-full ${c.clase}`} />
+          {c.texto}
         </span>
       ))}
     </div>

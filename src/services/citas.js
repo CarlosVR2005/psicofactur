@@ -10,9 +10,13 @@ import { getConfigGoogle } from './ajustes'
    trabaja con `fecha` ('YYYY-MM-DD') y `hora` ('HH:MM') porque es como
    se piensa una agenda. La conversión vive aquí.
 
-   OJO: `estado_confirmacion` NO se escribe nunca desde el frontend.
-   Lo pone el trigger de `recordatorios_whatsapp` cuando el paciente
-   responde. Aquí sólo se lee.
+   OJO: `estado_confirmacion` casi nunca se escribe desde el frontend.
+   Lo pone la sincronización con Google leyendo el círculo de color que
+   Confirmafy antepone al título del evento (verde / amarillo / rojo), y
+   antes lo ponía el trigger de `recordatorios_whatsapp`. La única
+   excepción es `actualizarCita(..., { reactivar: true })`: cuando ella
+   reprograma una cita que el paciente había cancelado, vuelve a dejarla
+   «pendiente».
    ================================================================ */
 
 // Con dos claves ajenas hacia `pacientes` hay que decirle a PostgREST
@@ -148,9 +152,17 @@ export async function crearCita(datos) {
   return { ...exito(cita), aviso }
 }
 
-export async function actualizarCita(id, datos) {
+/**
+ * @param opciones.reactivar  si es una cita que el paciente había
+ *   cancelado y ella la está reprogramando: vuelve a «pendiente». Es el
+ *   único caso en que el frontend toca `estado_confirmacion`.
+ */
+export async function actualizarCita(id, datos, { reactivar = false } = {}) {
+  const fila = aFila(datos)
+  if (reactivar) fila.estado_confirmacion = 'pendiente'
+
   const { data, error } = await ejecutar(
-    supabase.from('citas').update(aFila(datos)).eq('id', id).select(COLUMNAS).single(),
+    supabase.from('citas').update(fila).eq('id', id).select(COLUMNAS).single(),
     'guardar los cambios de la cita',
   )
   if (error) return { data: null, error }
