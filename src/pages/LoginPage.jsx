@@ -90,19 +90,28 @@ export default function LoginPage() {
           Si no recuerdas la contraseña, avisa a Carlos y te la restablece.
         </p>
 
-        {/* Enlace público a la política de privacidad: lo exige la
-            pantalla de consentimiento de Google y su verificación
-            comprueba que la portada apunte a ella. Es un archivo
-            estático (public/privacidad.html), así que <a> normal y no
-            un Link de React Router. */}
-        <p className="mt-2 text-center text-sm">
+        {/* Enlaces públicos a la política de privacidad y a las
+            condiciones: la pantalla de consentimiento de Google los pide
+            y su verificación comprueba que la portada apunte a ellos.
+            Son archivos estáticos (public/*.html), así que <a> normal y
+            no un Link de React Router. */}
+        <p className="mt-2 text-center text-sm text-tinta-tenue">
           <a
             href="/privacidad.html"
             target="_blank"
             rel="noopener"
-            className="text-tinta-tenue underline underline-offset-2 hover:text-tinta"
+            className="underline underline-offset-2 hover:text-tinta"
           >
             Política de privacidad
+          </a>
+          <span className="mx-1.5">·</span>
+          <a
+            href="/condiciones.html"
+            target="_blank"
+            rel="noopener"
+            className="underline underline-offset-2 hover:text-tinta"
+          >
+            Condiciones del servicio
           </a>
         </p>
       </div>
