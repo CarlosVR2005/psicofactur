@@ -5,7 +5,23 @@ import Boton from '../../components/ui/Boton'
 import Cargando from '../../components/ui/Cargando'
 import AvisoError from '../../components/ui/AvisoError'
 import { Campo, Entrada } from '../../components/ui/Campo'
+import { normalizar } from '../../lib/formato'
 import { eliminarPaciente, historialDePaciente } from '../../services/pacientes'
+
+/* El nombre guardado puede venir de una importación con un espacio
+   doble, un espacio no separable (NBSP) o un carácter de ancho cero
+   pegado: invisibles, pero hacían que la confirmación no cuadrara nunca
+   y el botón se quedara muerto aunque estuviera bien escrito. Se compara
+   sin tildes, con los espacios colapsados y sin caracteres invisibles. */
+function mismoNombre(escrito, real) {
+  const limpio = (s) =>
+    normalizar(s)
+      .replace(/[\u200B-\u200D\uFEFF]/g, '') // caracteres de ancho cero
+      .replace(/\s+/g, ' ') // NBSP y espacios repetidos -> uno solo
+      .trim()
+  const objetivo = limpio(real)
+  return objetivo !== '' && limpio(escrito) === objetivo
+}
 
 /* ================================================================
    ELIMINAR PACIENTE — la única acción irreversible de la aplicación
@@ -60,8 +76,7 @@ export default function EliminarPacienteModal({
   if (!paciente) return null
 
   const tieneFacturas = historial ? historial.facturas > 0 : false
-  const nombreOk =
-    confirmacion.trim().toLowerCase() === paciente.nombre.trim().toLowerCase()
+  const nombreOk = mismoNombre(confirmacion, paciente.nombre)
 
   const eliminar = async () => {
     if (!nombreOk || eliminando) return
