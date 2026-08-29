@@ -88,7 +88,8 @@ src/
 │   │                     actualizarCita · eliminarCita · suscribirCitas
 │   ├─ facturas.js        getFacturas · getFacturasDePaciente ·
 │   │                     getSesionesSinFacturar · facturarSesion ·
-│   │                     cambiarEstadoPago
+│   │                     facturarSesionesPendientes · editarBorradorFactura ·
+│   │                     cambiarMetodoPago · cambiarEstadoPago
 │   ├─ recordatorios.js   getProximasConRecordatorio · enviarPorWhatsApp ·
 │   │                     registrarEnvio · enlaceWhatsApp · marcarRespuesta
 │   ├─ googleCalendar.js  conectar · desconectar · sincronizarCita
@@ -122,8 +123,9 @@ src/
 │   │                     (lo que ve el PACIENTE, sin sesión)
 │   ├─ agenda/            VistaSemana · VistaMes · CitaChip · CitaModal ·
 │   │                     TipoCitaBadge · EventoPendiente
-│   ├─ facturacion/       FacturaFila · EstadoPagoBadge · GenerarFacturaModal
+│   ├─ facturacion/       FacturaFila · EstadoPagoBadge · MetodoPagoBoton ·
 │   │                     BotonEmitir · BotonPDF · BotonEnviarEmail ·
+│   │                     RectificarModal · EditarFacturaModal ·
 │   │                     pdfFactura.js (el documento) ·
 │   │                     datosPdfFactura.js (lo que lleva, en común
 │   │                     entre descargar y enviar)
@@ -822,15 +824,35 @@ su histórico de citas y facturas.
 - **Facturas: una por sesión**, no una mensual agrupada. La base ya lo impone
   con el índice único `idx_facturas_cita_unica` (una cita sólo se factura una
   vez).
-- **Facturación automática:** ya no hace falta pulsar nada en Pacientes. El
-  cron `psicofactur-facturar-citas-pasadas` (cada 15 minutos, migración 0015)
-  llama a `facturar_citas_pasadas()`, que crea la fila en `facturas`
-  (borrador, sin emitir a Verifacti) para toda cita ya celebrada
-  (`fecha_hora` pasada) y no cancelada que todavía no la tenga, con
+- **Facturación automática:** ya no hace falta pulsar nada, ni en Pacientes ni
+  en Facturación. El cron `psicofactur-facturar-citas-pasadas` (cada 15
+  minutos, migración 0015) llama a `facturar_citas_pasadas()`, que crea la
+  fila en `facturas` (borrador, sin emitir a Verifacti) para toda cita ya
+  celebrada (`fecha_hora` pasada) y no cancelada que todavía no la tenga, con
   `importe = precio_sesion`. En las sesiones de pareja se factura al
-  paciente titular. El modal «Sesiones sin facturar» de Facturación
-  (`BotonFacturar`/`getSesionesSinFacturar`) se queda como red de seguridad
-  manual, por si el cron aún no ha pasado por una sesión recién terminada.
+  paciente titular. Al abrir Facturación se hace además una pasada desde el
+  cliente (`facturarSesionesPendientes`, que reúne `getSesionesSinFacturar` +
+  `facturarSesion`) por si el cron aún no ha llegado a una sesión recién
+  terminada; ya no hay botón «Generar factura» ni modal «Sesiones sin
+  facturar».
+- **Método de pago editable:** `MetodoPagoBoton`, un botón-icono en cada fila
+  que se pulsa para ir pasando por sin especificar (cartera) → efectivo
+  (billete) → tarjeta → …, igual que el badge de estado de pago. Llama a
+  `cambiarMetodoPago`. Es un dato de contabilidad y **no viaja a la AEAT** (el
+  registro de facturación no recoge la forma de pago), así que se puede
+  cambiar cuando sea. Los valores heredados (transferencia, bizum, otro) se
+  ven con su icono y el ciclo los deja en «sin especificar» al primer toque.
+- **Editar el borrador antes de emitir:** botón con lápiz en cada factura que
+  todavía no ha salido a Hacienda (`!emitida && !anulada`). Abre
+  `EditarFacturaModal` y sólo deja tocar el **importe** —la fecha de emisión
+  no, porque la Edge Function la pone al día de hoy al emitir—. El servicio
+  `editarBorradorFactura` cierra con `.is('verifactu_id', null)`: si la
+  factura ya se hubiera emitido, no toca nada y avisa de que lo que queda es
+  rectificar. Una factura emitida no se edita nunca.
+- **La lista se agrupa y filtra por el mes de la SESIÓN**, no por el de
+  emisión (`factura.mesSesion`, que sale de `cita.fecha_hora`; si la cita ya
+  no está, cae al mes de `fecha_emision`). El desplegable de meses ofrece sólo
+  los que tienen alguna factura, y el resumen de arriba se mueve con él.
 - **Las facturas no se borran**: se anulan (`estado_pago = 'cancelado'`) y
   dejan de sumar en los totales. La tabla no tiene política de DELETE, y así
   la numeración correlativa nunca pierde un número.

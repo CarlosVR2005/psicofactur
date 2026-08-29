@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FilePlus2, ReceiptText } from 'lucide-react'
+import { ReceiptText } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Card from '../components/ui/Card'
-import Boton from '../components/ui/Boton'
 import Buscador from '../components/ui/Buscador'
 import Segmentado from '../components/ui/Segmentado'
+import { Seleccion } from '../components/ui/Campo'
 import EstadoVacio from '../components/ui/EstadoVacio'
 import AvisoError from '../components/ui/AvisoError'
 import Aviso from '../components/ui/Aviso'
 import { EsqueletoLista } from '../components/ui/Cargando'
 import FacturaFila from '../features/facturacion/FacturaFila'
-import SesionesSinFacturarModal from '../features/facturacion/SesionesSinFacturarModal'
-import { useFacturas, useSesionesSinFacturar } from '../hooks/useFacturas'
+import { useFacturas } from '../hooks/useFacturas'
+import { facturarSesionesPendientes } from '../services/facturas'
 import { sincronizarEstadoFacturas } from '../services/verifacti'
 import { euros, normalizar } from '../lib/formato'
 import { aClave, hoy, MESES } from '../lib/fechas'
@@ -24,19 +24,43 @@ const FILTROS = [
 
 function etiquetaMes(clave) {
   const [ano, mes] = clave.split('-')
-  return `${MESES[Number(mes) - 1]} ${ano}`
+  const nombre = MESES[Number(mes) - 1]
+  return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${ano}`
 }
 
 export default function FacturacionPage() {
   const { facturas, cargando, error, recargar, aplicarCambio } = useFacturas()
-  const sinFacturar = useSesionesSinFacturar()
 
   const [filtro, setFiltro] = useState('todas')
+  const [mesFiltro, setMesFiltro] = useState('todos')
   const [busqueda, setBusqueda] = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
 
   const mesEnCurso = aClave(hoy()).slice(0, 7)
+  // Con filtro de mes puesto, el resumen es de ese mes; si no, del actual
+  const mesResumen = mesFiltro === 'todos' ? mesEnCurso : mesFiltro
+
+  /* Facturar «todo» ya no es un botón: el cron `facturar_citas_pasadas`
+     crea la fila borrador de cada sesión celebrada. Al abrir la pantalla
+     se hace además una pasada por si el cron aún no ha llegado a una
+     sesión recién terminada. */
+  useEffect(() => {
+    let vivo = true
+    facturarSesionesPendientes().then(({ data }) => {
+      if (!vivo || !data || data.length === 0) return
+      recargar()
+      setAviso({
+        tipo: 'exito',
+        titulo:
+          data.length === 1
+            ? 'Se ha preparado 1 factura nueva'
+            : `Se han preparado ${data.length} facturas nuevas`,
+      })
+    })
+    return () => {
+      vivo = false
+    }
+  }, [recargar])
 
   /* ---- Confirmación de Hacienda ----------------------------------
      Emitir no es quedar presentada. La AEAT no admite envíos en tiempo
@@ -91,7 +115,7 @@ export default function FacturacionPage() {
     return () => clearInterval(id)
   }, [hayPendientes, comprobarEnHacienda])
 
-  /* Resumen del mes en curso.
+  /* Resumen del mes (el actual, o el que filtre la psicóloga).
 
      Ni las anuladas ni las rectificadas cuentan. Lo segundo importa
      desde que existen las rectificativas: la original y la que la
@@ -99,45 +123,41 @@ export default function FacturacionPage() {
      el total del mes con dinero que sólo se cobra una vez. */
   const resumen = useMemo(() => {
     const delMes = facturas.filter(
-      (f) => f.mes === mesEnCurso && f.estado !== 'cancelado' && f.estado !== 'anulada',
+      (f) => f.mesSesion === mesResumen && f.estado !== 'cancelado' && f.estado !== 'anulada',
     )
     const total = delMes.reduce((s, f) => s + f.importe, 0)
     const cobrado = delMes
       .filter((f) => f.estado === 'pagado')
       .reduce((s, f) => s + f.importe, 0)
     return { total, cobrado, pendiente: total - cobrado, numero: delMes.length }
-  }, [facturas, mesEnCurso])
+  }, [facturas, mesResumen])
+
+  // Los meses (de sesión) que tienen alguna factura, para el desplegable
+  const mesesConFactura = useMemo(() => {
+    const claves = new Set(facturas.map((f) => f.mesSesion))
+    return [...claves].sort((a, b) => b.localeCompare(a))
+  }, [facturas])
 
   const filtradas = useMemo(() => {
     const q = normalizar(busqueda.trim())
     return facturas.filter((f) => {
       if (filtro !== 'todas' && f.estado !== filtro) return false
+      if (mesFiltro !== 'todos' && f.mesSesion !== mesFiltro) return false
       if (!q) return true
       return normalizar(f.pacienteNombre).includes(q) || f.numero.includes(q)
     })
-  }, [facturas, filtro, busqueda])
+  }, [facturas, filtro, mesFiltro, busqueda])
 
-  // Agrupadas por mes de emisión, que es como se revisan
+  // Agrupadas por el mes de la SESIÓN (no el de emisión): es como se
+  // cuadra la contabilidad de la consulta.
   const porMes = useMemo(() => {
     const grupos = new Map()
     filtradas.forEach((f) => {
-      if (!grupos.has(f.mes)) grupos.set(f.mes, [])
-      grupos.get(f.mes).push(f)
+      if (!grupos.has(f.mesSesion)) grupos.set(f.mesSesion, [])
+      grupos.get(f.mesSesion).push(f)
     })
     return [...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [filtradas])
-
-  /** Llega desde el botón «Facturar» de cada sesión */
-  const alFacturar = (resultado) => {
-    setAviso(resultado)
-    if (resultado.tipo === 'error') {
-      recargar()
-      sinFacturar.recargar()
-      return
-    }
-    aplicarCambio(resultado.factura)
-    sinFacturar.quitar(resultado.sesion.citaId)
-  }
 
   /* Rectificar crea una factura NUEVA y anula la original: cambian dos
      filas a la vez, así que no vale con retocar una. Se recarga. */
@@ -150,21 +170,11 @@ export default function FacturacionPage() {
     <>
       <Cabecera
         titulo="Facturación"
-        subtitulo={`Resumen de ${etiquetaMes(mesEnCurso)}`}
-        accion={
-          <Boton icono={FilePlus2} onClick={() => setModalAbierto(true)}>
-            Generar factura
-            {sinFacturar.sesiones.length > 0 && (
-              <span className="rounded-full bg-white/20 px-1.5 text-sm tabular-nums">
-                {sinFacturar.sesiones.length}
-              </span>
-            )}
-          </Boton>
-        }
+        subtitulo={`Resumen de ${etiquetaMes(mesResumen)}`}
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Resumen
-            etiqueta="Facturado este mes"
+            etiqueta={mesFiltro === 'todos' ? 'Facturado este mes' : 'Facturado'}
             valor={euros(resumen.total)}
             detalle={`${resumen.numero} ${resumen.numero === 1 ? 'factura' : 'facturas'}`}
           />
@@ -179,6 +189,19 @@ export default function FacturacionPage() {
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Segmentado opciones={FILTROS} valor={filtro} alCambiar={setFiltro} />
+          <Seleccion
+            value={mesFiltro}
+            onChange={(e) => setMesFiltro(e.target.value)}
+            aria-label="Filtrar por mes de la sesión"
+            className="sm:w-52"
+          >
+            <option value="todos">Todos los meses</option>
+            {mesesConFactura.map((m) => (
+              <option key={m} value={m}>
+                {etiquetaMes(m)}
+              </option>
+            ))}
+          </Seleccion>
           <div className="flex-1">
             <Buscador
               valor={busqueda}
@@ -203,13 +226,8 @@ export default function FacturacionPage() {
           }
           texto={
             facturas.length === 0
-              ? 'Se generan desde el botón «Facturar» de cada paciente, o desde aquí.'
-              : 'Prueba a cambiar el filtro o el texto de búsqueda.'
-          }
-          accion={
-            <Boton icono={FilePlus2} onClick={() => setModalAbierto(true)}>
-              Generar factura
-            </Boton>
+              ? 'Cada sesión genera su factura en cuanto pasa su hora.'
+              : 'Prueba a cambiar el filtro, el mes o el texto de búsqueda.'
           }
         />
       ) : (
@@ -248,15 +266,6 @@ export default function FacturacionPage() {
           })}
         </div>
       )}
-
-      <SesionesSinFacturarModal
-        abierto={modalAbierto}
-        alCerrar={() => setModalAbierto(false)}
-        sesiones={sinFacturar.sesiones}
-        cargando={sinFacturar.cargando}
-        error={sinFacturar.error}
-        alFacturar={alFacturar}
-      />
 
       <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
     </>

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, FileWarning } from 'lucide-react'
+import { Ban, FileWarning, Pencil } from 'lucide-react'
 import Avatar from '../../components/ui/Avatar'
 import EstadoPagoBadge from './EstadoPagoBadge'
+import MetodoPagoBoton from './MetodoPagoBoton'
 import BotonEmitir from './BotonEmitir'
 import BotonPDF from './BotonPDF'
 import BotonEnviarEmail from './BotonEnviarEmail'
 import RectificarModal from './RectificarModal'
+import EditarFacturaModal from './EditarFacturaModal'
 import TipoCitaBadge from '../agenda/TipoCitaBadge'
 import { cambiarEstadoPago } from '../../services/facturas'
 import { euros } from '../../lib/formato'
@@ -18,6 +20,7 @@ import { fechaNumerica } from '../../lib/fechas'
 export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar }) {
   const [trabajando, setTrabajando] = useState(false)
   const [rectificando, setRectificando] = useState(false)
+  const [editando, setEditando] = useState(false)
 
   // 'cancelado' = no se cobra; 'anulada' = la sustituye una rectificativa
   const anulada = factura.estado === 'cancelado' || factura.estado === 'anulada'
@@ -92,6 +95,21 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
       </p>
 
       <div className="flex items-center gap-1.5">
+        {/* Editar sólo mientras es borrador: en cuanto sale hacia Hacienda
+            lo que queda es rectificarla. */}
+        {!factura.emitida && !anulada && (
+          <button
+            type="button"
+            onClick={() => setEditando(true)}
+            disabled={trabajando}
+            title="Editar la factura antes de emitirla"
+            aria-label="Editar la factura"
+            className="rounded-lg p-1.5 text-tinta-tenue transition-colors hover:bg-marca-50 hover:text-marca-700"
+          >
+            <Pencil className="size-4" strokeWidth={2} />
+          </button>
+        )}
+
         <BotonEmitir factura={factura} alEmitir={apuntarEmision} alFallar={alFallar} />
 
         <BotonPDF factura={factura} alFallar={alFallar} />
@@ -110,6 +128,14 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
               : () => cambiar(factura.estado === 'pagado' ? 'pendiente' : 'pagado')
           }
         />
+
+        <MetodoPagoBoton
+          factura={factura}
+          alCambiar={alCambiar}
+          alFallar={alFallar}
+          disabled={anulada || trabajando}
+        />
+
         {/* Rectificar sólo se ofrece si Hacienda la aceptó y no está ya
             rectificada. Antes de eso no hay nada que sustituir, y
             después la que vale es la rectificativa. */}
@@ -150,6 +176,18 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
         alRectificar={(aviso) => {
           setRectificando(false)
           alRectificar?.(aviso)
+        }}
+        alFallar={alFallar}
+      />
+
+      <EditarFacturaModal
+        factura={factura}
+        abierto={editando}
+        alCerrar={() => setEditando(false)}
+        alGuardar={(aviso) => {
+          setEditando(false)
+          alFallar?.(aviso) // el mismo canal de avisos, esta vez para bien
+          alCambiar?.(aviso.factura)
         }}
         alFallar={alFallar}
       />

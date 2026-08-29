@@ -64,8 +64,11 @@ function deFila(fila) {
     tipoSesion: fila.cita?.tipo ?? null,
     importe: Number(fila.importe ?? 0),
     fechaEmision: fila.fecha_emision,
-    // La contabilidad se agrupa por mes de emisión
+    // 'YYYY-MM' de emisión y de la sesión. La pantalla agrupa y filtra
+    // por el de la SESIÓN (cuándo se prestó el servicio); si la cita ya
+    // no está, se cae al de emisión para no perder la factura.
     mes: fila.fecha_emision.slice(0, 7),
+    mesSesion: (fila.cita?.fecha_hora ? aClave(sesion) : fila.fecha_emision).slice(0, 7),
     estado: fila.estado_pago,
     fechaPago: fila.fecha_pago,
     metodoPago: fila.metodo_pago,
@@ -202,6 +205,97 @@ export async function facturarSesion(sesion) {
         data: null,
         error: {
           mensaje: 'Esa sesión ya tiene factura. Actualiza la pantalla para verla.',
+          tecnico: error.tecnico,
+        },
+      }
+    }
+    return { data: null, error }
+  }
+  return exito(deFila(data))
+}
+
+/**
+ * Crea la fila (borrador) de TODAS las sesiones celebradas que aún no
+ * tienen factura. Es lo que hacía a mano el botón «Generar factura»,
+ * ahora automático: la pantalla de Facturación lo llama al abrirse como
+ * red de seguridad por si el cron `facturar_citas_pasadas` todavía no
+ * ha pasado por una sesión recién terminada.
+ *
+ * Devuelve sólo las que ha creado. Si una sesión se colara ya facturada
+ * (el cron se adelantó), `facturarSesion` da error de duplicado y se
+ * ignora sin más.
+ */
+export async function facturarSesionesPendientes() {
+  const { data: sesiones, error } = await getSesionesSinFacturar()
+  if (error) return { data: null, error }
+  if (sesiones.length === 0) return exito([])
+
+  const creadas = []
+  for (const sesion of sesiones) {
+    const { data } = await facturarSesion(sesion)
+    if (data) creadas.push(data)
+  }
+  return exito(creadas)
+}
+
+/**
+ * Forma de cobro de la factura: efectivo, tarjeta… Es un dato de
+ * contabilidad y se puede cambiar cuando se quiera; no viaja a la AEAT
+ * (el registro de facturación no recoge la forma de pago).
+ */
+export async function cambiarMetodoPago(id, metodo) {
+  const { data, error } = await ejecutar(
+    supabase
+      .from('facturas')
+      .update({ metodo_pago: metodo || null })
+      .eq('id', id)
+      .select(COLUMNAS)
+      .single(),
+    'cambiar el método de pago',
+  )
+  if (error) return { data: null, error }
+  return exito(deFila(data))
+}
+
+/**
+ * Retoca una factura que todavía es un BORRADOR (aún no registrada en
+ * Hacienda). Por ahora sólo el importe: la fecha de emisión no vale la
+ * pena tocarla porque la Edge Function la pone al día de hoy al emitir.
+ *
+ * El `.is('verifactu_id', null)` es el cierre de seguridad: si la
+ * factura ya se hubiera emitido, el update no toca ninguna fila y se
+ * devuelve un aviso claro en vez de dejar pasar el cambio. Una vez
+ * emitida, lo que toca es `rectificarFactura`.
+ */
+export async function editarBorradorFactura(id, { importe } = {}) {
+  const valor = Number(importe)
+  if (!(valor > 0)) {
+    return fallo(
+      new Error('importe no válido'),
+      'editar la factura',
+      'El importe tiene que ser un número mayor que cero.',
+    )
+  }
+
+  const { data, error } = await ejecutar(
+    supabase
+      .from('facturas')
+      .update({ importe: valor })
+      .eq('id', id)
+      .is('verifactu_id', null)
+      .select(COLUMNAS)
+      .single(),
+    'editar la factura',
+  )
+
+  if (error) {
+    // PGRST116 = el update no encontró fila: la factura ya se había emitido
+    if (error.tecnico?.code === 'PGRST116') {
+      return {
+        data: null,
+        error: {
+          mensaje:
+            'Esta factura ya se ha enviado a Hacienda y no se puede editar. Actualiza la pantalla: si tiene un dato mal, se rectifica.',
           tecnico: error.tecnico,
         },
       }
