@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ReceiptText } from 'lucide-react'
+import { FilePlus2, ReceiptText } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Card from '../components/ui/Card'
+import Boton from '../components/ui/Boton'
 import Buscador from '../components/ui/Buscador'
 import Segmentado from '../components/ui/Segmentado'
 import { Seleccion } from '../components/ui/Campo'
@@ -10,6 +11,7 @@ import AvisoError from '../components/ui/AvisoError'
 import Aviso from '../components/ui/Aviso'
 import { EsqueletoLista } from '../components/ui/Cargando'
 import FacturaFila from '../features/facturacion/FacturaFila'
+import FacturaManualModal from '../features/facturacion/FacturaManualModal'
 import { useFacturas } from '../hooks/useFacturas'
 import { facturarSesionesPendientes } from '../services/facturas'
 import { sincronizarEstadoFacturas } from '../services/verifacti'
@@ -35,6 +37,7 @@ export default function FacturacionPage() {
   const [mesFiltro, setMesFiltro] = useState('todos')
   const [busqueda, setBusqueda] = useState('')
   const [aviso, setAviso] = useState(null)
+  const [modalManual, setModalManual] = useState(false)
 
   const mesEnCurso = aClave(hoy()).slice(0, 7)
   // Con filtro de mes puesto, el resumen es de ese mes; si no, del actual
@@ -171,6 +174,11 @@ export default function FacturacionPage() {
       <Cabecera
         titulo="Facturación"
         subtitulo={`Resumen de ${etiquetaMes(mesResumen)}`}
+        accion={
+          <Boton icono={FilePlus2} onClick={() => setModalManual(true)}>
+            Nueva factura
+          </Boton>
+        }
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Resumen
@@ -266,6 +274,17 @@ export default function FacturacionPage() {
           })}
         </div>
       )}
+
+      <FacturaManualModal
+        abierto={modalManual}
+        alCerrar={() => setModalManual(false)}
+        alCreada={(resultado) => {
+          setModalManual(false)
+          setAviso(resultado)
+          aplicarCambio(resultado.factura)
+        }}
+        alFallar={setAviso}
+      />
 
       <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
     </>

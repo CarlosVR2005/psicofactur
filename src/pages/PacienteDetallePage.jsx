@@ -4,6 +4,7 @@ import {
   Archive,
   ArchiveRestore,
   BadgeEuro,
+  Building2,
   CakeSlice,
   CalendarPlus,
   ChevronLeft,
@@ -127,6 +128,11 @@ export default function PacienteDetallePage() {
                   </Badge>
                 )
               )}
+              {paciente.tipoCliente === 'empresa' && (
+                <Badge tono="azul" tamano="sm" icono={Building2}>
+                  Empresa
+                </Badge>
+              )}
               <Badge tono="neutro" tamano="sm">
                 {eurosCorto(paciente.precioSesion)} por sesión
               </Badge>
@@ -178,6 +184,21 @@ export default function PacienteDetallePage() {
               href={paciente.correo ? `mailto:${paciente.correo}` : undefined}
             />
             <DatoFicha icono={IdCard} etiqueta="DNI" valor={paciente.dni} />
+            {paciente.tipoCliente === 'empresa' && (
+              <>
+                <DatoFicha
+                  icono={Building2}
+                  etiqueta="Empresa"
+                  valor={paciente.empresaRazonSocial}
+                  ayuda={paciente.empresaCif || undefined}
+                />
+                <DatoFicha
+                  icono={Building2}
+                  etiqueta="Domicilio fiscal"
+                  valor={paciente.empresaDomicilio}
+                />
+              </>
+            )}
             <DatoFicha
               icono={CakeSlice}
               etiqueta="Fecha de nacimiento"

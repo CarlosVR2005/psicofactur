@@ -22,10 +22,12 @@ import { aClave, hoy } from '../lib/fechas'
 const COLUMNAS = `
   id, numero_factura, importe, fecha_emision, estado_pago, fecha_pago,
   paciente_id, cita_id, metodo_pago, tipo_factura, factura_rectificada_id,
-  motivo_rectificacion,
+  motivo_rectificacion, concepto,
+  base_imponible, tipo_igic, cuota_igic, tipo_irpf, cuota_irpf, total_factura, liquido,
+  destinatario_nif, destinatario_nombre, destinatario_domicilio,
   verifactu_id, verifactu_estado, verifactu_error, verifactu_qr_url, verifactu_hash,
   email_enviado_at, email_destinatario,
-  paciente:pacientes (id, nombre, dni, correo),
+  paciente:pacientes (id, nombre, dni, correo, tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio),
   cita:citas (id, fecha_hora, tipo),
   rectificada:facturas!factura_rectificada_id (numero_factura)
 `
@@ -63,6 +65,28 @@ function deFila(fila) {
       : null,
     tipoSesion: fila.cita?.tipo ?? null,
     importe: Number(fila.importe ?? 0),
+
+    /* Desglose (migración 0024). En las facturas de siempre —sesión
+       exenta a un particular— base == total == liquido == importe, y
+       IGIC/IRPF son cero. Las de empresa o las manuales lo usan de verdad. */
+    concepto: fila.concepto ?? null,
+    base: Number(fila.base_imponible ?? fila.importe ?? 0),
+    tipoIgic: Number(fila.tipo_igic ?? 0),
+    cuotaIgic: Number(fila.cuota_igic ?? 0),
+    tipoIrpf: Number(fila.tipo_irpf ?? 0),
+    cuotaIrpf: Number(fila.cuota_irpf ?? 0),
+    total: Number(fila.total_factura ?? fila.importe ?? 0),
+    liquido: Number(fila.liquido ?? fila.importe ?? 0),
+    esManual: !fila.cita_id,
+    esEmpresa: (fila.paciente?.tipo_cliente ?? 'particular') === 'empresa',
+    empresaRazonSocial: fila.paciente?.empresa_razon_social ?? '',
+    empresaCif: fila.paciente?.empresa_cif ?? '',
+    empresaDomicilio: fila.paciente?.empresa_domicilio ?? '',
+    // Copia del destinatario tal como estaba al emitir (null si aún borrador)
+    destinatarioNif: fila.destinatario_nif ?? null,
+    destinatarioNombre: fila.destinatario_nombre ?? null,
+    destinatarioDomicilio: fila.destinatario_domicilio ?? null,
+
     fechaEmision: fila.fecha_emision,
     // 'YYYY-MM' de emisión y de la sesión. La pantalla agrupa y filtra
     // por el de la SESIÓN (cuándo se prestó el servicio); si la cita ya
@@ -211,6 +235,74 @@ export async function facturarSesion(sesion) {
     }
     return { data: null, error }
   }
+  return exito(deFila(data))
+}
+
+const REDONDEO = (n) => Math.round(Number(n || 0) * 100) / 100
+
+/**
+ * Crea una factura que NO sale de una cita: talleres, formación, un
+ * servicio suelto a una empresa. Se elige la ficha (el destinatario), el
+ * concepto, la base y los tipos de IGIC e IRPF.
+ *
+ * Nace como BORRADOR, igual que las de sesión: registrarla en Hacienda
+ * es un paso aparte. El desglose (cuotas) se calcula aquí; `total_factura`
+ * y `liquido` los calcula sola la base de datos.
+ *
+ * @param {{pacienteId, concepto, baseImponible, tipoIgic?, tipoIrpf?}} datos
+ */
+export async function crearFacturaManual({
+  pacienteId,
+  concepto,
+  baseImponible,
+  tipoIgic = 0,
+  tipoIrpf = 0,
+}) {
+  const psicologaId = await psicologaActualId()
+  if (!psicologaId) {
+    return fallo(new Error('sin sesión'), 'crear la factura: la sesión ha caducado')
+  }
+
+  const base = REDONDEO(baseImponible)
+  if (!(base > 0)) {
+    return fallo(new Error('base'), 'crear la factura', 'La base imponible tiene que ser mayor que cero.')
+  }
+  if (!String(concepto ?? '').trim()) {
+    return fallo(new Error('concepto'), 'crear la factura', 'Hay que poner un concepto.')
+  }
+  if (!pacienteId) {
+    return fallo(new Error('sin ficha'), 'crear la factura', 'Hay que elegir a quién se factura.')
+  }
+
+  const igic = Number(tipoIgic) || 0
+  const irpf = Number(tipoIrpf) || 0
+  const cuotaIgic = REDONDEO((base * igic) / 100)
+  const cuotaIrpf = REDONDEO((base * irpf) / 100)
+
+  const { data, error } = await ejecutar(
+    supabase
+      .from('facturas')
+      .insert({
+        psicologa_id: psicologaId,
+        paciente_id: pacienteId,
+        cita_id: null,
+        concepto: String(concepto).trim(),
+        base_imponible: base,
+        tipo_igic: igic,
+        cuota_igic: cuotaIgic,
+        tipo_irpf: irpf,
+        cuota_irpf: cuotaIrpf,
+        importe: REDONDEO(base + cuotaIgic), // legado: = total_factura
+        fecha_emision: aClave(hoy()),
+        estado_pago: 'pendiente',
+        // numero_factura lo pone el trigger de la base de datos
+      })
+      .select(COLUMNAS)
+      .single(),
+    'crear la factura',
+  )
+
+  if (error) return { data: null, error }
   return exito(deFila(data))
 }
 

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { ejecutar, exito, fallo, psicologaActualId } from './base'
+import { normalizarNif } from '../lib/nif'
 
 /* ================================================================
    PACIENTES — tabla `pacientes`
@@ -26,6 +27,13 @@ function deFila(fila) {
     observaciones: fila.observaciones ?? '',
     activo: fila.activo,
     creadoEn: fila.created_at,
+
+    /* Particular o empresa (migración 0024). Si es empresa, la factura
+       se emite a nombre de la empresa, con retención de IRPF. */
+    tipoCliente: fila.tipo_cliente ?? 'particular',
+    empresaRazonSocial: fila.empresa_razon_social ?? '',
+    empresaCif: fila.empresa_cif ?? '',
+    empresaDomicilio: fila.empresa_domicilio ?? '',
 
     /* Progenitores o tutores del menor (migración 0021). Se usan para el
        contacto y para mandarle el consentimiento a cada uno. */
@@ -55,6 +63,11 @@ function aFila(datos) {
 
   const telefonoNulo = (v) => oNulo(v?.replace(/\s/g, ''))
 
+  // Los datos de empresa sólo se guardan si la ficha es de empresa: en
+  // una ficha de particular quedarían como restos sin sentido.
+  const esEmpresa = datos.tipoCliente === 'empresa'
+  const cifNormalizado = normalizarNif(datos.empresaCif || '') || null
+
   return {
     nombre: datos.nombre?.trim(),
     dni: oNulo(datos.dni?.trim()),
@@ -64,6 +77,11 @@ function aFila(datos) {
     precio_sesion: Number(datos.precioSesion ?? 0),
     inicio_terapia: oNulo(datos.inicioTerapia),
     observaciones: oNulo(datos.observaciones?.trim()),
+
+    tipo_cliente: esEmpresa ? 'empresa' : 'particular',
+    empresa_razon_social: esEmpresa ? oNulo(datos.empresaRazonSocial?.trim()) : null,
+    empresa_cif: esEmpresa ? cifNormalizado : null,
+    empresa_domicilio: esEmpresa ? oNulo(datos.empresaDomicilio?.trim()) : null,
 
     progenitor1_nombre: oNulo(datos.progenitor1Nombre?.trim()),
     progenitor1_dni: oNulo(datos.progenitor1Dni?.trim()),
@@ -78,6 +96,7 @@ function aFila(datos) {
 
 const COLUMNAS =
   'id, nombre, dni, telefono, correo, fecha_nacimiento, precio_sesion, inicio_terapia, observaciones, activo, created_at, ' +
+  'tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio, ' +
   'progenitor1_nombre, progenitor1_dni, progenitor1_correo, progenitor1_telefono, ' +
   'progenitor2_nombre, progenitor2_dni, progenitor2_correo, progenitor2_telefono, ' +
   'consentimiento_estado, consentimiento_fecha_envio, consentimiento_fecha_firma'

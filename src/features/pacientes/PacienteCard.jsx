@@ -33,6 +33,11 @@ export default function PacienteCard({ paciente }) {
               Menor de edad
             </Badge>
           )}
+          {paciente.tipoCliente === 'empresa' && (
+            <Badge tono="azul" tamano="sm" className="shrink-0">
+              Empresa
+            </Badge>
+          )}
         </p>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-tinta-suave">
           {paciente.telefono ? (
