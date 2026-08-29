@@ -89,6 +89,20 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-tinta-tenue">
           Si no recuerdas la contraseña, avisa a Carlos y te la restablece.
         </p>
+
+        {/* Enlace público a la política de privacidad: lo exige la
+            pantalla de consentimiento de Google y su verificación
+            comprueba que la portada apunte a ella. Es un archivo
+            estático (public/privacidad.html), así que <a> normal y no
+            un Link de React Router. */}
+        <p className="mt-2 text-center text-sm">
+          <a
+            href="/privacidad.html"
+            className="text-tinta-tenue underline underline-offset-2 hover:text-tinta"
+          >
+            Política de privacidad
+          </a>
+        </p>
       </div>
     </div>
   )

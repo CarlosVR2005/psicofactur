@@ -1,0 +1,281 @@
+<!doctype html>
+<!--
+  Política de privacidad de Psicofactur.
+
+  Situación que refleja este texto: la aplicación NO es un producto comercial.
+  La desarrolla y la mantiene una persona, sin ánimo de lucro, y la usa un
+  grupo reducido de psicólogos/as concretos. Cada profesional es el
+  responsable de los datos de su consulta; quien opera la app es un encargado
+  del tratamiento por cuenta de ellos.
+
+  Se sirve como archivo estático: la URL pública es
+  https://TU-DOMINIO/privacidad.html
+  Es la que se pone en Google Cloud Console → Pantalla de consentimiento de OAuth
+  → «Vínculo a la Política de Privacidad».
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#4F7C74" />
+    <title>Política de privacidad · Psicofactur</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --fondo: #f6f3ee;
+        --papel: #ffffff;
+        --tinta: #2b2a28;
+        --tinta-suave: #5b584f;
+        --borde: #e6e1d7;
+        --marca: #4f7c74;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fondo: #1b1a18;
+          --papel: #232220;
+          --tinta: #ece9e2;
+          --tinta-suave: #b3afa4;
+          --borde: #383630;
+          --marca: #86b3aa;
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--fondo);
+        color: var(--tinta);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.65;
+      }
+      .envoltorio { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      main {
+        background: var(--papel);
+        border: 1px solid var(--borde);
+        border-radius: 1rem;
+        padding: 2rem 1.75rem;
+      }
+      h1 { font-size: 1.55rem; line-height: 1.25; margin: 0 0 0.25rem; }
+      h2 { font-size: 1.15rem; margin: 2rem 0 0.6rem; }
+      h3 { font-size: 1rem; margin: 1.4rem 0 0.4rem; }
+      p, ul { margin: 0.6rem 0; }
+      ul { padding-left: 1.25rem; }
+      li { margin: 0.3rem 0; }
+      a { color: var(--marca); }
+      code { font-size: 0.92em; word-break: break-all; }
+      .fecha { color: var(--tinta-suave); font-size: 0.9rem; margin: 0 0 1.5rem; }
+      .volver { display: inline-block; margin-top: 1.5rem; font-size: 0.9rem; }
+      footer { color: var(--tinta-suave); font-size: 0.85rem; text-align: center; margin-top: 2rem; }
+    </style>
+  </head>
+  <body>
+    <div class="envoltorio">
+      <main>
+        <h1>Política de privacidad de Psicofactur</h1>
+        <p class="fecha">Última actualización: 29 de agosto de 2026</p>
+
+        <p>
+          Psicofactur es una aplicación para la gestión de una consulta de psicología
+          (agenda, pacientes, facturación y recordatorios). No es un producto
+          comercial: la desarrolla y la mantiene en funcionamiento una persona, sin
+          ánimo de lucro, y su uso está limitado a un grupo reducido de profesionales
+          de la psicología autorizados expresamente. Esta página explica qué datos
+          trata la aplicación, con qué fin y durante cuánto tiempo, con especial
+          detalle en los datos a los que se accede a través de las APIs de Google.
+        </p>
+
+        <h2>1. Quién responde de qué</h2>
+        <p>
+          Psicofactur la desarrolla y la opera <strong>Carlos Vizcaino Rigol</strong>
+          («el operador»). Correo de contacto:
+          <a href="mailto:carlosvirigol@gmail.com">carlosvirigol@gmail.com</a>.
+        </p>
+        <ul>
+          <li>
+            <strong>Cada profesional que usa la aplicación es el responsable del
+            tratamiento</strong> de los datos de su propia consulta: los de sus
+            pacientes y los de su agenda. Es a quien corresponde decidir qué datos se
+            recogen y para qué.
+          </li>
+          <li>
+            <strong>El operador actúa como encargado del tratamiento</strong> por
+            cuenta de esos profesionales: solo trata esos datos para que la aplicación
+            funcione y siguiendo sus instrucciones, en el marco del acuerdo entre cada
+            profesional y el operador. Por sí mismo, el operador solo es responsable de
+            los datos de la cuenta de acceso (el correo de inicio de sesión) y de los
+            registros técnicos imprescindibles para operar y proteger el servicio.
+          </li>
+          <li>
+            Cada profesional informa a sus pacientes mediante su propia política de
+            privacidad; la aplicación únicamente aporta la herramienta.
+          </li>
+        </ul>
+
+        <h2>2. Datos que se tratan</h2>
+
+        <h3>2.1. Datos de tu cuenta de Google (si conectas Google Calendar)</h3>
+        <p>
+          La conexión con Google Calendar es <strong>opcional</strong> y la activa cada
+          profesional desde Ajustes. Si se activa, la aplicación solicita estos
+          permisos y los usa solo para lo que se indica:
+        </p>
+        <ul>
+          <li>
+            <strong>Ver y editar los eventos de tus calendarios</strong>
+            (<code>https://www.googleapis.com/auth/calendar.events</code>): se usa para
+            mantener sincronizada la agenda de la consulta con Google Calendar en los
+            dos sentidos. Las citas creadas o modificadas en Psicofactur se reflejan
+            como eventos en el calendario, y los eventos del calendario se importan a
+            Psicofactur como citas. La aplicación no accede a la lista de calendarios
+            ni a la configuración de la cuenta.
+          </li>
+          <li>
+            <strong>Tu dirección de correo electrónico</strong>
+            (<code>email</code>, <code>openid</code>): se usa únicamente para mostrar
+            en Ajustes con qué cuenta de Google está conectada la aplicación
+            («Conectado como…»).
+          </li>
+        </ul>
+        <p>
+          Para que la sincronización funcione en segundo plano, Google entrega a la
+          aplicación unas credenciales de acceso (tokens OAuth, incluido un
+          <em>refresh token</em>). Se guardan cifradas en el servidor (ver punto 5) y
+          no se muestran en ninguna pantalla.
+        </p>
+
+        <h3>2.2. Datos de gestión de la consulta</h3>
+        <p>
+          Los introduce cada profesional para poder trabajar: datos identificativos y
+          de contacto de los pacientes (nombre, teléfono, correo, DNI), datos de las
+          citas, importes y datos de facturación, y el texto de los consentimientos
+          informados firmados. Pueden incluir datos de categoría especial (salud), en
+          la medida imprescindible para la asistencia psicológica. La base jurídica es
+          la relación asistencial entre el profesional y su paciente y el cumplimiento
+          de las obligaciones legales (fiscales y sanitarias) de esa consulta.
+        </p>
+
+        <h2>3. Finalidades</h2>
+        <ul>
+          <li>Gestionar la agenda de cada consulta y sincronizarla con Google Calendar.</li>
+          <li>Gestionar las fichas de pacientes y el historial de citas.</li>
+          <li>Emitir y registrar las facturas ante la Agencia Tributaria y, si procede, enviarlas por correo.</li>
+          <li>Enviar recordatorios de cita y recabar el consentimiento informado.</li>
+          <li>Mantener la cuenta de acceso y la seguridad de la aplicación.</li>
+        </ul>
+
+        <h2>4. Uso limitado de los datos de Google (Limited Use)</h2>
+        <p>
+          El uso que Psicofactur hace de la información recibida de las APIs de Google
+          se ajusta a la
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">
+            Política de Datos de Usuario de los Servicios API de Google</a>, incluidos
+          sus requisitos de Uso Limitado. En particular:
+        </p>
+        <ul>
+          <li>Los datos de Google Calendar se usan solo para prestar y mejorar las funciones de agenda descritas en esta política.</li>
+          <li>No se transfieren a terceros salvo que sea necesario para prestar el servicio (ver punto 5), lo exija la ley o medie tu consentimiento.</li>
+          <li>No se usan ni se venden con fines publicitarios.</li>
+          <li>Ninguna persona lee esos datos, salvo que lo autorices, sea necesario por seguridad (por ejemplo, investigar un abuso) o lo exija la ley, o cuando se trate de datos agregados y anonimizados.</li>
+        </ul>
+
+        <h2>5. Dónde se guardan y con qué proveedores</h2>
+        <p>
+          La aplicación se apoya en proveedores que actúan como encargados (o
+          subencargados) del tratamiento y tratan los datos solo para prestar su
+          servicio:
+        </p>
+        <ul>
+          <li><strong>Supabase</strong> — base de datos y lógica de servidor (alojamiento en la Unión Europea). Las credenciales de Google se guardan cifradas mediante Supabase Vault; el acceso está restringido y protegido por reglas de seguridad a nivel de fila, de modo que cada cuenta solo alcanza sus propios datos.</li>
+          <li><strong>Vercel</strong> — alojamiento de la parte web (páginas y archivos estáticos).</li>
+          <li><strong>Google</strong> — API de Google Calendar, cuando la conexión está activada.</li>
+          <li><strong>Verifacti</strong> — registro de las facturas ante la Agencia Tributaria (sistema Veri*Factu).</li>
+          <li><strong>Brevo</strong> — envío de los correos con facturas y consentimientos, cuando se usan.</li>
+        </ul>
+        <p>Todas las comunicaciones viajan cifradas mediante HTTPS.</p>
+
+        <h2>6. Cesiones</h2>
+        <p>
+          No se ceden datos a terceros con fines comerciales. Los únicos destinatarios
+          son los proveedores del punto 5, en la medida necesaria para prestar el
+          servicio, y las administraciones públicas cuando exista una obligación legal
+          (por ejemplo, la Agencia Tributaria en relación con la facturación).
+        </p>
+
+        <h2>7. Conservación y revocación del acceso a Google</h2>
+        <ul>
+          <li>
+            Cada profesional puede <strong>desconectar Google Calendar en cualquier
+            momento</strong> desde Ajustes → Google Calendar → «Desconectar». Al
+            hacerlo, la aplicación revoca el permiso en Google y borra de forma
+            permanente las credenciales almacenadas. También puedes retirar el acceso
+            desde
+            <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">la configuración de seguridad de tu cuenta de Google</a>.
+          </li>
+          <li>
+            Los eventos que ya se hubieran creado en el calendario o las citas ya
+            importadas no se eliminan solos al desconectar; se pueden borrar
+            manualmente.
+          </li>
+          <li>
+            Los datos de gestión de cada consulta se conservan mientras el profesional
+            usa la aplicación y durante los plazos que le exija la normativa fiscal y
+            sanitaria. Si un profesional deja de usar Psicofactur, sus datos se le
+            entregan o se suprimen.
+          </li>
+        </ul>
+
+        <h2>8. Seguridad</h2>
+        <p>
+          El acceso a la aplicación requiere usuario y contraseña. Las credenciales de
+          Google se almacenan cifradas y no son accesibles desde el navegador. El
+          acceso a la base de datos está limitado por reglas de seguridad a nivel de
+          fila, de modo que cada cuenta solo alcanza sus propios datos.
+        </p>
+
+        <h2>9. Tus derechos</h2>
+        <ul>
+          <li>
+            <strong>Si eres paciente de una de las consultas</strong>: dirige tus
+            solicitudes de acceso, rectificación, supresión, oposición, limitación y
+            portabilidad a tu psicólogo/a, que es el responsable de tus datos.
+          </li>
+          <li>
+            <strong>Si eres profesional que usa la aplicación</strong>, o para
+            cuestiones sobre el funcionamiento de la aplicación y los datos de tu
+            cuenta de acceso: escribe a
+            <a href="mailto:carlosvirigol@gmail.com">carlosvirigol@gmail.com</a>.
+          </li>
+        </ul>
+        <p>
+          En todo caso, si consideras que el tratamiento no se ajusta a la normativa,
+          puedes reclamar ante la Agencia Española de Protección de Datos
+          (<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>).
+        </p>
+
+        <h2>10. Menores</h2>
+        <p>
+          Cuando la persona atendida es menor de edad, sus datos los facilita y
+          gestiona quien ostenta la patria potestad o la tutela, que también firma el
+          consentimiento informado.
+        </p>
+
+        <h2>11. Cambios en esta política</h2>
+        <p>
+          Si esta política cambia, se actualizará esta misma página y se modificará la
+          fecha de «última actualización» del encabezado.
+        </p>
+
+        <h2>12. Contacto</h2>
+        <p>
+          Para cualquier cuestión relacionada con esta política o con el tratamiento
+          de datos por parte de la aplicación:
+          <a href="mailto:carlosvirigol@gmail.com">carlosvirigol@gmail.com</a>.
+        </p>
+
+        <a class="volver" href="/">← Volver a Psicofactur</a>
+      </main>
+      <footer>Psicofactur</footer>
+    </div>
+  </body>
+</html>
