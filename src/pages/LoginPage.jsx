@@ -98,6 +98,8 @@ export default function LoginPage() {
         <p className="mt-2 text-center text-sm">
           <a
             href="/privacidad.html"
+            target="_blank"
+            rel="noopener"
             className="text-tinta-tenue underline underline-offset-2 hover:text-tinta"
           >
             Política de privacidad

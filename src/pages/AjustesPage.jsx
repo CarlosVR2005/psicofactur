@@ -34,6 +34,19 @@ export default function AjustesPage() {
         <ConexionWhatsApp alAvisar={setAviso} />
       </div>
 
+      {/* Archivo estático (public/privacidad.html): <a> normal, y en
+          pestaña nueva para no salir de la aplicación. */}
+      <p className="mt-6 text-center text-sm text-tinta-tenue">
+        <a
+          href="/privacidad.html"
+          target="_blank"
+          rel="noopener"
+          className="underline underline-offset-2 hover:text-tinta"
+        >
+          Política de privacidad
+        </a>
+      </p>
+
       <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
     </>
   )
