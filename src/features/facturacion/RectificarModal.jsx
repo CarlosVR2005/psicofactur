@@ -4,6 +4,7 @@ import Modal from '../../components/ui/Modal'
 import Boton from '../../components/ui/Boton'
 import { Campo, Entrada, AreaTexto } from '../../components/ui/Campo'
 import { rectificarFactura } from '../../services/verifacti'
+import { rectificarFacturaLocal } from '../../services/facturas'
 import { euros } from '../../lib/formato'
 
 /* ================================================================
@@ -19,7 +20,14 @@ import { euros } from '../../lib/formato'
    El motivo es obligatorio porque va a Hacienda como la descripción de
    la rectificativa, no es un campo de notas interno.
    ================================================================ */
-export default function RectificarModal({ factura, abierto, alCerrar, alRectificar, alFallar }) {
+export default function RectificarModal({
+  factura,
+  verifactuActivo = false,
+  abierto,
+  alCerrar,
+  alRectificar,
+  alFallar,
+}) {
   const [importe, setImporte] = useState('')
   const [motivo, setMotivo] = useState('')
   const [trabajando, setTrabajando] = useState(false)
@@ -39,11 +47,17 @@ export default function RectificarModal({ factura, abierto, alCerrar, alRectific
   const enviar = async () => {
     if (!valido || trabajando) return
     setTrabajando(true)
-    const { data, error } = await rectificarFactura({
-      facturaId: factura.id,
-      importe: importeCorregido,
-      motivo,
-    })
+    const { data, error } = verifactuActivo
+      ? await rectificarFactura({
+          facturaId: factura.id,
+          importe: importeCorregido,
+          motivo,
+        })
+      : await rectificarFacturaLocal({
+          facturaId: factura.id,
+          importe: importeCorregido,
+          motivo,
+        })
     setTrabajando(false)
 
     if (error) {
@@ -56,7 +70,9 @@ export default function RectificarModal({ factura, abierto, alCerrar, alRectific
     alRectificar?.({
       tipo: 'exito',
       titulo: `Factura ${data.numero} emitida en sustitución de la ${factura.numero}`,
-      detalle: 'Hacienda tarda alrededor de un minuto en confirmarla.',
+      detalle: verifactuActivo
+        ? 'Hacienda tarda alrededor de un minuto en confirmarla.'
+        : 'Ya puedes descargarla y enviársela al paciente.',
       factura: data,
       originalId: factura.id,
     })
@@ -82,10 +98,11 @@ export default function RectificarModal({ factura, abierto, alCerrar, alRectific
     >
       <div className="space-y-5">
         <p className="rounded-xl bg-crema px-4 py-3 text-sm text-tinta-suave">
-          Una factura enviada a Hacienda no se puede modificar. Lo que se hace es
-          emitir <strong className="text-tinta">otra factura nueva</strong> que la
-          sustituye. La {factura.numero} se quedará en la lista marcada como
-          anulada: no se borra, y eso es lo correcto.
+          Una factura ya emitida no se modifica
+          {verifactuActivo ? ', y menos si se ha enviado a Hacienda' : ''}. Lo que
+          se hace es emitir <strong className="text-tinta">otra factura nueva</strong>{' '}
+          que la sustituye. La {factura.numero} se quedará en la lista marcada
+          como anulada: no se borra, y eso es lo correcto.
         </p>
 
         <Campo

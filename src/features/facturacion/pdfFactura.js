@@ -172,6 +172,10 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
     doc.text(LEYENDA_VERIFACTU_LARGA, ANCHO_PAGINA / 2, y, { align: 'center' })
     doc.setTextColor(0)
     y += 12
+  } else if (emisor?.logo) {
+    /* Sin QR (Veri*Factu apagado) no hay banda superior que reserve
+       sitio: se baja `y` por debajo del logo para que no pise el título. */
+    y += LOGO_ALTO_MAX + 8
   }
 
   /* ---------- Cabecera: qué documento es ---------- */

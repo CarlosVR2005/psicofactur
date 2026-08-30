@@ -105,8 +105,8 @@ export default function EditarFacturaModal({ factura, abierto, alCerrar, alGuard
       <div className="space-y-5">
         <p className="rounded-xl bg-crema px-4 py-3 text-sm text-tinta-suave">
           Esto sólo se puede hacer mientras la factura es un{' '}
-          <strong className="text-tinta">borrador</strong>. Una vez registrada en
-          Hacienda ya no se edita: habría que rectificarla.
+          <strong className="text-tinta">borrador</strong>. Una vez emitida ya no
+          se edita: habría que rectificarla.
         </p>
 
         {conDesglose ? (

@@ -26,7 +26,7 @@ const COLUMNAS = `
   base_imponible, tipo_igic, cuota_igic, tipo_irpf, cuota_irpf, total_factura, liquido,
   destinatario_nif, destinatario_nombre, destinatario_domicilio,
   verifactu_id, verifactu_estado, verifactu_error, verifactu_qr_url, verifactu_hash,
-  email_enviado_at, email_destinatario,
+  emitida_at, email_enviado_at, email_destinatario,
   paciente:pacientes (id, nombre, dni, correo, tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio),
   cita:citas (id, fecha_hora, tipo),
   rectificada:facturas!factura_rectificada_id (numero_factura)
@@ -123,7 +123,11 @@ function deFila(fila) {
     emailEnviadoEn: fila.email_enviado_at,
     emailDestinatario: fila.email_destinatario ?? '',
 
-    emitida: Boolean(fila.verifactu_id),
+    /* «Emitida» = ya no es un borrador. Con Veri*Factu activo se deduce
+       de `verifactu_id`; con Veri*Factu apagado, de `emitida_at`, que
+       pone `emitirFacturaLocal`. Cualquiera de las dos vale. */
+    emitida: Boolean(fila.verifactu_id) || Boolean(fila.emitida_at),
+    emitidaAt: fila.emitida_at ?? null,
     verifactuId: fila.verifactu_id,
     verifactuEstado: fila.verifactu_estado,
     verifactuError: fila.verifactu_error,
@@ -352,6 +356,183 @@ export async function facturarSesionesPendientes() {
   return exito(creadas)
 }
 
+/* ================================================================
+   EMITIR EN LOCAL — cuando `psicologas.verifactu_activo` es false
+
+   «Emitir» no llama a ninguna Edge Function ni a la AEAT: sólo cierra
+   la factura aquí. Le fija la fecha del día y le pone `emitida_at`. A
+   partir de ahí se puede descargar y mandar, y ya no se edita: se
+   rectifica.
+
+   Repite las comprobaciones de la Edge Function `generar-factura` que
+   siguen teniendo sentido sin red: el corte de 0 € y el aviso de la
+   factura que se quedó de otro año (mover su fecha metería un número de
+   la serie del año pasado en una factura de éste).
+   ================================================================ */
+export async function emitirFacturaLocal(facturaId) {
+  if (!facturaId) {
+    return fallo(new Error('sin factura'), 'emitir la factura', 'No se sabe qué factura emitir.')
+  }
+
+  const { data: factura, error } = await ejecutar(
+    supabase.from('facturas').select(COLUMNAS).eq('id', facturaId).single(),
+    'emitir la factura',
+  )
+  if (error) return { data: null, error }
+
+  // Ya cerrada: no se toca nada, se devuelve tal cual (idempotente)
+  if (factura.emitida_at) return exito(deFila(factura))
+
+  // Ésta va por el camino de Verifacti, no por aquí
+  if (factura.verifactu_id) {
+    return fallo(
+      new Error('verifactu'),
+      'emitir la factura',
+      'Esta factura ya está registrada en Hacienda.',
+    )
+  }
+
+  const total = Number(factura.total_factura ?? factura.importe ?? 0)
+  if (!(total > 0)) {
+    return fallo(
+      new Error('importe cero'),
+      'emitir la factura',
+      `${factura.paciente?.nombre ?? 'Este paciente'} no tiene precio por sesión, así que la factura saldría de 0 €. Ponle el precio en su ficha y vuelve a intentarlo.`,
+    )
+  }
+
+  const hoyClave = aClave(hoy())
+  const anoDelNumero = String(factura.numero_factura ?? '').match(/(\d{4})\//)?.[1]
+  if (anoDelNumero && anoDelNumero !== hoyClave.slice(0, 4)) {
+    return fallo(
+      new Error('otro año'),
+      'emitir la factura',
+      'Esta factura se creó otro año y no se llegó a emitir. Anúlala y crea una nueva con la fecha de hoy.',
+    )
+  }
+
+  const cambios = { emitida_at: new Date().toISOString() }
+  if (factura.fecha_emision !== hoyClave) cambios.fecha_emision = hoyClave
+
+  const { data, error: errorGuardar } = await ejecutar(
+    supabase
+      .from('facturas')
+      .update(cambios)
+      .eq('id', facturaId)
+      .is('emitida_at', null)
+      .is('verifactu_id', null)
+      .select(COLUMNAS)
+      .single(),
+    'emitir la factura',
+  )
+  if (errorGuardar) {
+    // PGRST116 = el update no tocó ninguna fila: otra pestaña la emitió
+    if (errorGuardar.tecnico?.code === 'PGRST116') {
+      return fallo(
+        new Error('carrera'),
+        'emitir la factura',
+        'Esta factura ya se ha emitido. Actualiza la pantalla.',
+      )
+    }
+    return { data: null, error: errorGuardar }
+  }
+  return exito(deFila(data))
+}
+
+/**
+ * Rectifica una factura SIN Veri*Factu: crea otra en serie «R» que la
+ * sustituye y deja la original anulada. Mismo criterio legal que la
+ * rectificativa que va a la AEAT (ver la Edge Function `generar-factura`),
+ * sólo que aquí todo ocurre en la base.
+ *
+ * @param {{facturaId: string, importe: number, motivo: string}} datos
+ */
+export async function rectificarFacturaLocal({ facturaId, importe, motivo } = {}) {
+  if (!facturaId) {
+    return fallo(new Error('sin factura'), 'rectificar la factura', 'No se sabe qué factura rectificar.')
+  }
+  const motivoLimpio = String(motivo ?? '').trim()
+  if (!motivoLimpio) {
+    return fallo(
+      new Error('sin motivo'),
+      'rectificar la factura',
+      'Hay que explicar por qué se rectifica la factura.',
+    )
+  }
+  const importeCorregido = Number(importe)
+  if (!(importeCorregido > 0)) {
+    return fallo(
+      new Error('importe'),
+      'rectificar la factura',
+      'El importe corregido tiene que ser mayor que cero.',
+    )
+  }
+
+  const psicologaId = await psicologaActualId()
+  if (!psicologaId) {
+    return fallo(new Error('sin sesión'), 'rectificar la factura: la sesión ha caducado')
+  }
+
+  const { data: original, error: errorOrig } = await ejecutar(
+    supabase.from('facturas').select(COLUMNAS).eq('id', facturaId).single(),
+    'rectificar la factura',
+  )
+  if (errorOrig) return { data: null, error: errorOrig }
+
+  if (!original.emitida_at && !original.verifactu_id) {
+    return fallo(
+      new Error('no emitida'),
+      'rectificar la factura',
+      'Sólo se rectifican facturas ya emitidas. Si todavía es un borrador, edítala.',
+    )
+  }
+
+  const { data: nueva, error: errorAlta } = await ejecutar(
+    supabase
+      .from('facturas')
+      .insert({
+        psicologa_id: psicologaId,
+        paciente_id: original.paciente_id,
+        cita_id: original.cita_id,
+        importe: importeCorregido,
+        fecha_emision: aClave(hoy()),
+        estado_pago: 'pendiente',
+        tipo_factura: 'rectificativa',
+        factura_rectificada_id: original.id,
+        motivo_rectificacion: motivoLimpio,
+        emitida_at: new Date().toISOString(),
+        // numero_factura lo pone el trigger, con serie «R»
+      })
+      .select(COLUMNAS)
+      .single(),
+    'rectificar la factura',
+  )
+
+  if (errorAlta) {
+    // 23505 sobre idx_facturas_una_rectificativa_por_original
+    if (errorAlta.tecnico?.code === '23505') {
+      return fallo(
+        new Error('ya rectificada'),
+        'rectificar la factura',
+        'Esa factura ya estaba rectificada. Actualiza la pantalla; si la rectificativa también está mal, rectifica esa otra.',
+      )
+    }
+    return { data: null, error: errorAlta }
+  }
+
+  /* La original se anula SÓLO cuando la rectificativa ya existe: al revés
+     quedaría una factura anulada sin nada que la sustituya. */
+  const { error: errorAnular } = await ejecutar(
+    supabase.from('facturas').update({ estado_pago: 'anulada' }).eq('id', original.id),
+    'anular la factura original',
+  )
+  if (errorAnular) {
+    console.error('[Psicofactur] rectificativa creada pero original sin anular:', errorAnular)
+  }
+
+  return exito(deFila(nueva))
+}
+
 /**
  * Forma de cobro de la factura: efectivo, tarjeta… Es un dato de
  * contabilidad y se puede cambiar cuando se quiera; no viaja a la AEAT
@@ -423,6 +604,7 @@ export async function editarBorradorFactura(id, { importe, base, tipoIgic, tipoI
       .update(cambios)
       .eq('id', id)
       .is('verifactu_id', null)
+      .is('emitida_at', null)
       .select(COLUMNAS)
       .single(),
     'editar la factura',
@@ -435,7 +617,7 @@ export async function editarBorradorFactura(id, { importe, base, tipoIgic, tipoI
         data: null,
         error: {
           mensaje:
-            'Esta factura ya se ha enviado a Hacienda y no se puede editar. Actualiza la pantalla: si tiene un dato mal, se rectifica.',
+            'Esta factura ya está emitida y no se puede editar. Actualiza la pantalla: si tiene un dato mal, se rectifica.',
           tecnico: error.tecnico,
         },
       }

@@ -14,7 +14,7 @@ import FacturaFila from '../features/facturacion/FacturaFila'
 import FacturaManualModal from '../features/facturacion/FacturaManualModal'
 import { useFacturas } from '../hooks/useFacturas'
 import { facturarSesionesPendientes } from '../services/facturas'
-import { sincronizarEstadoFacturas } from '../services/verifacti'
+import { getDatosFiscales, sincronizarEstadoFacturas } from '../services/verifacti'
 import { euros, normalizar } from '../lib/formato'
 import { aClave, hoy, MESES } from '../lib/fechas'
 
@@ -38,6 +38,19 @@ export default function FacturacionPage() {
   const [busqueda, setBusqueda] = useState('')
   const [aviso, setAviso] = useState(null)
   const [modalManual, setModalManual] = useState(false)
+
+  /* ¿Veri*Factu encendido? (migración 0028). Apagado —lo normal ahora—,
+     «Emitir» cierra la factura en local y no se sondea a Hacienda. */
+  const [verifactuActivo, setVerifactuActivo] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    getDatosFiscales().then(({ data }) => {
+      if (vivo && data) setVerifactuActivo(data.verifactuActivo === true)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   const mesEnCurso = aClave(hoy()).slice(0, 7)
   // Con filtro de mes puesto, el resumen es de ese mes; si no, del actual
@@ -76,8 +89,8 @@ export default function FacturacionPage() {
      intervalo se limpia; el tope es una red de seguridad por si alguna
      se quedara encallada en la AEAT y la pantalla se dejara abierta. */
   const hayPendientes = useMemo(
-    () => facturas.some((f) => f.verifactuEstado === 'Pendiente'),
-    [facturas],
+    () => verifactuActivo && facturas.some((f) => f.verifactuEstado === 'Pendiente'),
+    [verifactuActivo, facturas],
   )
   const intentos = useRef(0)
 
@@ -263,6 +276,7 @@ export default function FacturacionPage() {
                     <FacturaFila
                       key={f.id}
                       factura={f}
+                      verifactuActivo={verifactuActivo}
                       alCambiar={aplicarCambio}
                       alFallar={setAviso}
                       alRectificar={alRectificarFactura}

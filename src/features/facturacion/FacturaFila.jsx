@@ -18,13 +18,27 @@ import { fechaNumerica } from '../../lib/fechas'
 /* Una factura de la lista: una sesión facturada.
    El badge de estado es pulsable (cobrada / pendiente) y, mientras
    sigue pendiente, se puede anular — las facturas no se borran. */
-export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar }) {
+export default function FacturaFila({
+  factura,
+  verifactuActivo = false,
+  alCambiar,
+  alFallar,
+  alRectificar,
+}) {
   const [trabajando, setTrabajando] = useState(false)
   const [rectificando, setRectificando] = useState(false)
   const [editando, setEditando] = useState(false)
 
   // 'cancelado' = no se cobra; 'anulada' = la sustituye una rectificativa
   const anulada = factura.estado === 'cancelado' || factura.estado === 'anulada'
+
+  /* Se puede rectificar una factura que ya está cerrada y no anulada.
+     Con Veri*Factu hay que esperar además a que Hacienda la acepte; sin
+     Veri*Factu basta con que esté emitida, y no se rectifica una que ya
+     es rectificativa (para eso se rectifica esa misma). */
+  const puedeRectificar = verifactuActivo
+    ? factura.verifactuEstado === 'Correcto' && factura.estado !== 'anulada'
+    : factura.emitida && !anulada && factura.tipo !== 'rectificativa'
 
   // Lleva desglose (base / IGIC / IRPF) que merece la pena enseñar
   const conDesglose = factura.tipoIgic > 0 || factura.tipoIrpf > 0
@@ -40,11 +54,16 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
     alCambiar?.(data)
   }
 
-  /* Al emitir, la Edge Function devuelve sólo lo que ha cambiado, no la
-     factura entera. Se fusiona sobre la que ya tenemos y la lista se
-     entera al momento, sin volver a consultar. */
+  /* Al emitir: con Veri*Factu, la Edge Function devuelve sólo lo que ha
+     cambiado y hay que fusionarlo sobre la factura que ya tenemos; en
+     local, `emitirFacturaLocal` devuelve la factura entera y basta con
+     sustituirla. En los dos casos la lista se entera al momento. */
   const apuntarEmision = (aviso) => {
     alFallar?.(aviso) // el mismo canal de avisos, esta vez para bien
+    if (!verifactuActivo) {
+      alCambiar?.(aviso.factura ?? { ...factura, emitida: true })
+      return
+    }
     alCambiar?.({
       ...factura,
       emitida: true,
@@ -129,12 +148,22 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
           </button>
         )}
 
-        <BotonEmitir factura={factura} alEmitir={apuntarEmision} alFallar={alFallar} />
+        <BotonEmitir
+          factura={factura}
+          verifactuActivo={verifactuActivo}
+          alEmitir={apuntarEmision}
+          alFallar={alFallar}
+        />
 
-        <BotonPDF factura={factura} alFallar={alFallar} />
+        <BotonPDF
+          factura={factura}
+          verifactuActivo={verifactuActivo}
+          alFallar={alFallar}
+        />
 
         <BotonEnviarEmail
           factura={factura}
+          verifactuActivo={verifactuActivo}
           alCambiar={alCambiar}
           alFallar={alFallar}
         />
@@ -155,10 +184,11 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
           disabled={anulada || trabajando}
         />
 
-        {/* Rectificar sólo se ofrece si Hacienda la aceptó y no está ya
-            rectificada. Antes de eso no hay nada que sustituir, y
-            después la que vale es la rectificativa. */}
-        {factura.verifactuEstado === 'Correcto' && factura.estado !== 'anulada' && (
+        {/* Rectificar: cuando la factura ya está cerrada (y aceptada por
+            Hacienda si Veri*Factu está activo) y no está ya rectificada.
+            Antes no hay nada que sustituir; después la que vale es la
+            rectificativa. */}
+        {puedeRectificar && (
           <button
             type="button"
             onClick={() => setRectificando(true)}
@@ -190,6 +220,7 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
 
       <RectificarModal
         factura={factura}
+        verifactuActivo={verifactuActivo}
         abierto={rectificando}
         alCerrar={() => setRectificando(false)}
         alRectificar={(aviso) => {

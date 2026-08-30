@@ -25,10 +25,16 @@ import { prepararFacturaPDF } from './datosPdfFactura'
    junta— y sería absurdo que se descargara al abrir la agenda alguien
    que quizá no imprima una factura en toda la mañana.
    ================================================================ */
-export default function BotonPDF({ factura, alFallar }) {
+export default function BotonPDF({ factura, verifactuActivo = false, alFallar }) {
   const [trabajando, setTrabajando] = useState(false)
 
-  if (factura.verifactuEstado !== 'Correcto') return null
+  /* Con Veri*Factu, sólo cuando Hacienda la ha aceptado (hace falta el
+     QR). Sin Veri*Factu, en cuanto está emitida: es una factura
+     ordinaria completa, sin QR. */
+  const entregable = verifactuActivo
+    ? factura.verifactuEstado === 'Correcto'
+    : factura.emitida
+  if (!entregable) return null
 
   const descargar = async () => {
     if (trabajando) return

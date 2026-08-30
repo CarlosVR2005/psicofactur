@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, RotateCcw, ShieldAlert, ShieldCheck, Upload } from 'lucide-react'
+import { Check, Loader2, RotateCcw, ShieldAlert, ShieldCheck, Upload } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 import { emitirFactura } from '../../services/verifacti'
+import { emitirFacturaLocal } from '../../services/facturas'
+import { fechaNumerica } from '../../lib/fechas'
 
 /* ================================================================
    Botón «Emitir»: registra la factura en Hacienda (Veri*Factu).
@@ -24,10 +26,68 @@ import { emitirFactura } from '../../services/verifacti'
                       pinta en rojo y con el motivo, porque una factura
                       rechazada que parezca correcta es justo lo que no
                       puede pasar.
+   ================================================================
+
+   Con Veri*Factu APAGADO (`verifactuActivo = false`, migración 0028) no
+   hay nada de esto: «Emitir» cierra la factura en local —le pone la
+   fecha de hoy y `emitida_at`— y ya. O es borrador, o está emitida.
    ================================================================ */
-export default function BotonEmitir({ factura, alEmitir, alFallar }) {
+export default function BotonEmitir({ factura, verifactuActivo = false, alEmitir, alFallar }) {
   const [trabajando, setTrabajando] = useState(false)
   const navegar = useNavigate()
+
+  /* ---------- Veri*Factu apagado ---------- */
+  if (!verifactuActivo) {
+    if (factura.emitida) {
+      return (
+        <Badge tono="verde" tamano="sm" icono={Check}>
+          <span
+            title={
+              factura.emitidaAt
+                ? `Emitida el ${fechaNumerica(String(factura.emitidaAt).slice(0, 10))}`
+                : 'Factura emitida'
+            }
+          >
+            Emitida
+          </span>
+        </Badge>
+      )
+    }
+
+    const emitirLocal = async () => {
+      if (trabajando) return
+      setTrabajando(true)
+      const { data, error } = await emitirFacturaLocal(factura.id)
+      setTrabajando(false)
+      if (error) {
+        alFallar?.({ tipo: 'error', titulo: error.mensaje })
+        return
+      }
+      alEmitir?.({
+        tipo: 'exito',
+        titulo: `Factura ${data.numero} emitida`,
+        detalle: 'Ya puedes descargarla y enviársela al paciente.',
+        factura: data,
+      })
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={emitirLocal}
+        disabled={trabajando}
+        title="Emitir la factura: le pone la fecha de hoy y la deja definitiva"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-marca-50 px-3 py-1.5 text-sm font-medium text-marca-700 transition-colors hover:bg-marca-100 active:scale-[0.98] disabled:opacity-50"
+      >
+        {trabajando ? (
+          <Loader2 className="size-4 animate-spin" strokeWidth={2.2} />
+        ) : (
+          <Upload className="size-4" strokeWidth={2} />
+        )}
+        Emitir
+      </button>
+    )
+  }
 
   const emitir = async () => {
     if (trabajando) return

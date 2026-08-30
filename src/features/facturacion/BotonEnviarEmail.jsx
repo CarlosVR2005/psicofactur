@@ -19,11 +19,16 @@ import { fechaNumerica } from '../../lib/fechas'
    base64 a la Edge Function. La dirección de destino NO se manda: la
    lee ella de la ficha del paciente.
    ================================================================ */
-export default function BotonEnviarEmail({ factura, alCambiar, alFallar }) {
+export default function BotonEnviarEmail({ factura, verifactuActivo = false, alCambiar, alFallar }) {
   const [trabajando, setTrabajando] = useState(false)
   const navegar = useNavigate()
 
-  if (factura.verifactuEstado !== 'Correcto') return null
+  /* Misma condición que «Descargar»: con Veri*Factu, factura aceptada
+     por Hacienda; sin Veri*Factu, factura emitida. */
+  const entregable = verifactuActivo
+    ? factura.verifactuEstado === 'Correcto'
+    : factura.emitida
+  if (!entregable) return null
 
   const yaEnviada = Boolean(factura.emailEnviadoEn)
   const sinCorreo = !factura.pacienteCorreo

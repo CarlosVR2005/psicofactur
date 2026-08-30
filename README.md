@@ -846,8 +846,9 @@ su histórico de citas y facturas.
   todavía no ha salido a Hacienda (`!emitida && !anulada`). Abre
   `EditarFacturaModal` y sólo deja tocar el **importe** —la fecha de emisión
   no, porque la Edge Function la pone al día de hoy al emitir—. El servicio
-  `editarBorradorFactura` cierra con `.is('verifactu_id', null)`: si la
-  factura ya se hubiera emitido, no toca nada y avisa de que lo que queda es
+  `editarBorradorFactura` cierra con `.is('verifactu_id', null)` +
+  `.is('emitida_at', null)`: si la factura ya se hubiera emitido (por
+  cualquiera de los dos caminos), no toca nada y avisa de que lo que queda es
   rectificar. Una factura emitida no se edita nunca.
 - **La lista se agrupa y filtra por el mes de la SESIÓN**, no por el de
   emisión (`factura.mesSesion`, que sale de `cita.fecha_hora`; si la cita ya
@@ -862,12 +863,27 @@ su histórico de citas y facturas.
   `CREATE SEQUENCE` porque es global (mezclaría psicólogas) y no se reinicia
   cada 1 de enero. El índice único `facturas_numero_unico` es la red de
   seguridad.
+- **Veri\*Factu: encendido o apagado** (`psicologas.verifactu_activo`, migración
+  0028). **Apagado** (lo normal ahora): «Emitir» no llama a ninguna Edge
+  Function ni a la AEAT — `emitirFacturaLocal` le pone la fecha de hoy y
+  `facturas.emitida_at`, y ya está definitiva. El PDF sale **sin QR ni leyenda
+  VERI\*FACTU** (una factura ordinaria completa del RD 1619/2012 no los
+  necesita); descargar y enviar por correo aparecen en cuanto está emitida.
+  Rectificar va por `rectificarFacturaLocal` (serie `R`, misma lógica que la
+  Edge Function pero sin red). **Encendido**: todo el flujo de Verifacti de
+  siempre (`generar-factura`, estados `Pendiente`/`Correcto`/`Incorrecto`,
+  `sincronizar-estado-facturas`, Subsanar). El código de Verifacti no se ha
+  tocado; sólo deja de ejecutarse. Reengancharlo = poner el flag a `true`, los
+  secretos `VERIFACTI_*` y la API key de producción. La pantalla lee el flag de
+  `getDatosFiscales` (`verifactuActivo`).
 - **La factura por correo al paciente:** botón en cada factura de la lista,
   que le manda el PDF al correo de su ficha (`enviar-factura-email` + Brevo).
-  Sólo aparece con `verifactu_estado = 'Correcto'`, por lo mismo que
-  «Descargar»: el QR de una factura sin aceptar apunta a un registro que no
-  existe o que fue rechazado. Aquí pesa más, porque un PDF mal se tira y un
-  correo enviado no.
+  Aparece **cuando la factura está cerrada**: con Veri\*Factu activo eso es
+  `verifactu_estado = 'Correcto'` (el QR de una factura sin aceptar apunta a un
+  registro que no existe); con Veri\*Factu apagado, en cuanto tiene
+  `emitida_at`. Misma condición que «Descargar». La Edge Function lo vuelve a
+  comprobar de su lado (`emitida_at` o `Correcto`): el botón se puede saltar,
+  eso no.
   **La dirección de destino no viaja desde el navegador**: la lee la Edge
   Function de la ficha del paciente. Si se aceptara del cliente, el botón
   sería un formulario para mandar cualquier adjunto a cualquier dirección

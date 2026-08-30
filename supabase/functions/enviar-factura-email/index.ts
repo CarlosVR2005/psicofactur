@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
   const { data: factura, error: errorFactura } = await db
     .from('facturas')
     .select(
-      `id, numero_factura, importe, fecha_emision, verifactu_estado,
+      `id, numero_factura, importe, fecha_emision, verifactu_estado, emitida_at,
        paciente:pacientes!facturas_paciente_id_fkey (nombre, correo),
        cita:citas!facturas_cita_id_fkey (fecha_hora)`,
     )
@@ -114,20 +114,23 @@ Deno.serve(async (req) => {
 
   /* ---------- 2. ¿Está en condiciones de mandarse? ----------
 
-     La misma regla que para descargar el PDF, y por el mismo motivo: el
-     QR de una factura que Hacienda no ha aceptado apunta a un registro
-     que no existe o que fue rechazado. Mandársela al paciente es darle
-     un papel que no vale.
+     Tiene que estar CERRADA. Con Veri*Factu eso significa que Hacienda
+     la ha aceptado (su QR apunta a un registro real); sin Veri*Factu
+     basta con que se haya pulsado «Emitir» (`emitida_at`).
 
      Se comprueba AQUÍ además de en la pantalla: el botón se puede
      saltar, esto no. */
-  if (factura.verifactu_estado !== 'Correcto') {
+  const cerrada =
+    Boolean(factura.emitida_at) || factura.verifactu_estado === 'Correcto'
+  if (!cerrada) {
     return json(
       {
         mensaje:
           factura.verifactu_estado === 'Incorrecto'
             ? 'Hacienda rechazó esa factura, así que no se le puede mandar al paciente. Subsánala primero.'
-            : 'Esa factura todavía no la ha aceptado Hacienda. Espera a que se confirme antes de mandarla.',
+            : factura.verifactu_estado === 'Pendiente'
+              ? 'Esa factura todavía no la ha aceptado Hacienda. Espera a que se confirme antes de mandarla.'
+              : 'Esa factura todavía no está emitida. Púlsale «Emitir» antes de mandarla.',
       },
       400,
     )

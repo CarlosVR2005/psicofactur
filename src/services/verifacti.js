@@ -212,7 +212,7 @@ export async function getDatosFiscales() {
 
   const { data, error } = await supabase
     .from('psicologas')
-    .select('nif, razon_social, direccion_fiscal, iban, logo, verifactu_config')
+    .select('nif, razon_social, direccion_fiscal, iban, logo, verifactu_config, verifactu_activo')
     .eq('id', id)
     .single()
 
@@ -234,6 +234,9 @@ export async function getDatosFiscales() {
       logo: data?.logo ?? null,
       // Consulta en Canarias: el PDF cita la exención de IGIC, no de IVA
       regimenCanarias: data?.verifactu_config?.regimenCanarias === true,
+      /* false = las facturas se cierran en local, sin AEAT ni QR (migración
+         0028). La pantalla lo usa para elegir qué hace «Emitir». */
+      verifactuActivo: data?.verifactu_activo === true,
       faltan,
       completo: faltan.length === 0,
     },
