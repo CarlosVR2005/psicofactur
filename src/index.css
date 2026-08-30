@@ -15,7 +15,9 @@
   --color-crema: #f7f5f2;
   --color-tinta: #2e2b28;
   --color-tinta-suave: #6b655d;
-  --color-tinta-tenue: #9a938a;
+  /* Antes #9a938a: no llegaba a AA (≈3:1) y se usa para todas las
+     etiquetas y textos de ayuda. Un punto más oscuro → ≈4:1. */
+  --color-tinta-tenue: #847c71;
   --color-borde: #e8e3dc;
   --color-borde-fuerte: #d7d0c6;
 
@@ -30,16 +32,18 @@
   --color-marca-700: #34534e;
   --color-marca-800: #2b4340;
 
-  /* Acentos de estado (sólo para badges y avisos) */
-  --color-verde: #3f8f6c;
+  /* Acentos de estado (sólo para badges y avisos). La "tinta" de cada
+     uno se oscureció ~15-20% para que `text-{color}` sobre su fondo
+     `-suave` llegue a AA (antes 3–4:1); los fondos `-suave` no cambian. */
+  --color-verde: #2f7a5b;
   --color-verde-suave: #e7f3ee;
-  --color-ambar: #c07c22;
+  --color-ambar: #a06514;
   --color-ambar-suave: #fbf0e0;
-  --color-rojo: #bd5a4c;
+  --color-rojo: #a8493b;
   --color-rojo-suave: #fbeae7;
-  --color-malva: #7f6ea3;
+  --color-malva: #6c5a90;
   --color-malva-suave: #f0edf7;
-  --color-azul: #4a7fa8;
+  --color-azul: #3a6d95;
   --color-azul-suave: #e8f0f6;
 
   /* Tipo de sesión en la agenda. Tres tonos bien separados —verde
