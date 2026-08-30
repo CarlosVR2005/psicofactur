@@ -596,7 +596,7 @@ export async function editarBorradorFactura(id, { importe, base, tipoIgic, tipoI
       importe: REDONDEO(b + cuotaIgic - cuotaIrpf), // líquido
     }
   } else {
-    const valor = Number(importe)
+    const valor = REDONDEO(importe)
     if (!(valor > 0)) {
       return fallo(
         new Error('importe no válido'),
@@ -604,7 +604,12 @@ export async function editarBorradorFactura(id, { importe, base, tipoIgic, tipoI
         'El importe tiene que ser un número mayor que cero.',
       )
     }
-    cambios = { importe: valor }
+    /* Sesión exenta a un particular: base = total = líquido = importe.
+       Hay que tocar `base_imponible`, no solo `importe`: `total_factura`
+       y `liquido` son columnas GENERADAS a partir de la base, y la
+       pantalla lee el importe de `liquido`. Sin esto el cambio se
+       guardaba pero no se veía. */
+    cambios = { importe: valor, base_imponible: valor }
   }
 
   const { data, error } = await ejecutar(
