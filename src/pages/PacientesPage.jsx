@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowDownUp, Plus, UserRoundSearch, Users } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
+import Card from '../components/ui/Card'
 import Buscador from '../components/ui/Buscador'
 import Boton from '../components/ui/Boton'
 import Segmentado from '../components/ui/Segmentado'
@@ -9,16 +10,24 @@ import EstadoVacio from '../components/ui/EstadoVacio'
 import AvisoError from '../components/ui/AvisoError'
 import Aviso from '../components/ui/Aviso'
 import { EsqueletoLista } from '../components/ui/Cargando'
-import PacienteCard from '../features/pacientes/PacienteCard'
+import PacienteFila from '../features/pacientes/PacienteFila'
 import PacienteModal from '../features/pacientes/PacienteModal'
 import ImportarExportarModal from '../features/pacientes/ImportarExportarModal'
 import { usePacientes } from '../hooks/usePacientes'
 import { normalizar } from '../lib/formato'
+import { esMenorDeEdad } from '../lib/menores'
 
 const VISTAS = [
-  { id: 'activos', etiqueta: 'En activo' },
-  { id: 'todos', etiqueta: 'Con archivados' },
+  { id: 'activos', etiqueta: 'Activos' },
+  { id: 'todos', etiqueta: 'Todos' },
 ]
+
+/* Letra de agrupación del listado: sin tildes y en mayúscula; lo que no
+   empieza por letra cae en «#». */
+function primeraLetra(nombre) {
+  const c = normalizar(nombre).trim()[0] ?? '#'
+  return /[a-z]/.test(c) ? c.toUpperCase() : '#'
+}
 
 export default function PacientesPage() {
   const [vista, setVista] = useState('activos')
@@ -55,7 +64,23 @@ export default function PacientesPage() {
     )
   }, [pacientes, busqueda])
 
+  /* Con búsqueda no se agrupa: hay pocas líneas y el orden alfabético
+     estorba más que ayuda. Sin ella, una sección por inicial. */
+  const grupos = useMemo(() => {
+    if (busqueda) return [{ letra: null, filas: resultados }]
+    const mapa = new Map()
+    for (const p of resultados) {
+      const l = primeraLetra(p.nombre)
+      if (!mapa.has(l)) mapa.set(l, [])
+      mapa.get(l).push(p)
+    }
+    return [...mapa.entries()].map(([letra, filas]) => ({ letra, filas }))
+  }, [resultados, busqueda])
+
   const activos = pacientes.filter((p) => p.activo).length
+  const menores = pacientes.filter(
+    (p) => p.activo && esMenorDeEdad(p.fechaNacimiento),
+  ).length
 
   return (
     <>
@@ -64,7 +89,8 @@ export default function PacientesPage() {
         subtitulo={
           cargando
             ? 'Cargando…'
-            : `${activos} ${activos === 1 ? 'paciente' : 'pacientes'} en la consulta`
+            : `${activos} ${activos === 1 ? 'paciente' : 'pacientes'}` +
+              (menores ? ` · ${menores} ${menores === 1 ? 'menor' : 'menores'}` : '')
         }
         accion={
           <div className="flex items-center gap-2">
@@ -135,9 +161,20 @@ export default function PacientesPage() {
               {resultados.length === 1 ? 'resultado' : 'resultados'}
             </p>
           )}
-          <div className="space-y-2.5">
-            {resultados.map((p) => (
-              <PacienteCard key={p.id} paciente={p} />
+          <div className="space-y-5">
+            {grupos.map(({ letra, filas }) => (
+              <section key={letra ?? 'resultados'}>
+                {letra && (
+                  <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+                    {letra}
+                  </h2>
+                )}
+                <Card className="divide-y divide-borde overflow-hidden p-0">
+                  {filas.map((p) => (
+                    <PacienteFila key={p.id} paciente={p} />
+                  ))}
+                </Card>
+              </section>
             ))}
           </div>
         </>

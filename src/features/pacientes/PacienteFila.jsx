@@ -1,20 +1,29 @@
 import { Link } from 'react-router-dom'
-import { ChevronRight, Phone } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import Avatar from '../../components/ui/Avatar'
 import Badge from '../../components/ui/Badge'
 import ConsentimientoBadge from './ConsentimientoBadge'
-import { eurosCorto, telefono } from '../../lib/formato'
-import { edad } from '../../lib/fechas'
+import { deClave, edad, mesYAno } from '../../lib/fechas'
 import { esMenorDeEdad } from '../../lib/menores'
 
-export default function PacienteCard({ paciente }) {
+const capitalizar = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t)
+
+/* Una fila del listado de pacientes. Ligera a propósito: el listado
+   puede tener cientos de líneas, así que nada de tarjeta con sombra por
+   fila — van dentro de una sola tarjeta separadas por filete. */
+export default function PacienteFila({ paciente }) {
   const anos = paciente.fechaNacimiento ? edad(paciente.fechaNacimiento) : null
   const menor = esMenorDeEdad(paciente.fechaNacimiento)
+  const desde = paciente.inicioTerapia
+    ? `Desde ${capitalizar(mesYAno(deClave(paciente.inicioTerapia)))}`
+    : null
+
+  const meta = [desde, anos !== null && `${anos} años`].filter(Boolean).join('  ·  ')
 
   return (
     <Link
       to={`/pacientes/${paciente.id}`}
-      className={`flex items-center gap-3 rounded-2xl border border-borde bg-white px-4 py-3.5 shadow-suave transition-colors hover:border-marca-200 hover:bg-marca-50/40 sm:gap-4 ${
+      className={`group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-marca-50/50 sm:gap-4 ${
         paciente.activo ? '' : 'opacity-70'
       }`}
     >
@@ -24,13 +33,13 @@ export default function PacienteCard({ paciente }) {
         <p className="flex items-center gap-2 truncate font-medium text-tinta">
           <span className="truncate">{paciente.nombre}</span>
           {!paciente.activo && (
-            <Badge tono="neutro" tamano="sm">
+            <Badge tono="neutro" tamano="sm" className="shrink-0">
               Archivado
             </Badge>
           )}
           {menor && (
             <Badge tono="ambar" tamano="sm" className="shrink-0">
-              Menor de edad
+              Menor
             </Badge>
           )}
           {paciente.tipoCliente === 'empresa' && (
@@ -39,21 +48,8 @@ export default function PacienteCard({ paciente }) {
             </Badge>
           )}
         </p>
-        <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-tinta-suave">
-          {paciente.telefono ? (
-            <>
-              <Phone className="size-3.5 shrink-0" strokeWidth={2} />
-              {telefono(paciente.telefono)}
-            </>
-          ) : (
-            <span className="text-tinta-tenue">Sin teléfono</span>
-          )}
-          {anos !== null && (
-            <>
-              <span className="text-tinta-tenue">·</span>
-              {anos} años
-            </>
-          )}
+        <p className="mt-0.5 truncate text-sm text-tinta-suave">
+          {meta || 'Ficha sin completar'}
         </p>
       </div>
 
@@ -63,14 +59,10 @@ export default function PacienteCard({ paciente }) {
         estado={paciente.consentimientoEstado}
         tamano="sm"
         mostrarSinEnviar={false}
-        etiqueta={paciente.consentimientoEstado === 'FIRMADO' ? 'Firmado' : 'Sin firmar'}
+        etiqueta={paciente.consentimientoEstado === 'FIRMADO' ? 'Firmado' : 'Pendiente'}
       />
 
-      <span className="hidden text-sm font-medium text-tinta-suave lg:block">
-        {eurosCorto(paciente.precioSesion)}/sesión
-      </span>
-
-      <ChevronRight className="size-5 shrink-0 text-tinta-tenue" />
+      <ChevronRight className="size-5 shrink-0 text-tinta-tenue transition-colors group-hover:text-marca-500" />
     </Link>
   )
 }
