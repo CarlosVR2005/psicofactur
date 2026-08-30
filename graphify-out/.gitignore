@@ -1,0 +1,5 @@
+# Sidecars con rutas absolutas de la máquina / caché regenerable
+.graphify_python
+.graphify_root
+.graphify_labels.json
+cache/

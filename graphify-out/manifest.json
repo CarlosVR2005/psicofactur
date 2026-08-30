@@ -1,0 +1,938 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1787242533.0884016,
+    "seen": 1788053777.5133545,
+    "ast_hash": "7483b81bf3b9712c57242e629edebafc",
+    "semantic_hash": "7483b81bf3b9712c57242e629edebafc"
+  },
+  "package.json": {
+    "mtime": 1787504167.3454232,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8326a418607cca5ac81761f9c81ae245",
+    "semantic_hash": "8326a418607cca5ac81761f9c81ae245"
+  },
+  "src/App.jsx": {
+    "mtime": 1787571817.7490675,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a504ef3f539c10357b1d8675652f5d06",
+    "semantic_hash": "a504ef3f539c10357b1d8675652f5d06"
+  },
+  "src/components/layout/AppLayout.jsx": {
+    "mtime": 1787416954.476894,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e8d9f2e8fb47ebfa1f192816afb3fe35",
+    "semantic_hash": "e8d9f2e8fb47ebfa1f192816afb3fe35"
+  },
+  "src/components/layout/Cabecera.jsx": {
+    "mtime": 1787242024.9198081,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c61805c4ba52923b8fd0b8b49360a2f4",
+    "semantic_hash": "c61805c4ba52923b8fd0b8b49360a2f4"
+  },
+  "src/components/layout/Marca.jsx": {
+    "mtime": 1787949440.65678,
+    "seen": 1788053777.5133545,
+    "ast_hash": "58723edfecb50e69686fe212848aa20e",
+    "semantic_hash": "58723edfecb50e69686fe212848aa20e"
+  },
+  "src/components/layout/RutaProtegida.jsx": {
+    "mtime": 1787244009.0289009,
+    "seen": 1788053777.5133545,
+    "ast_hash": "1622f24051a955204a4df74f0a924b56",
+    "semantic_hash": "1622f24051a955204a4df74f0a924b56"
+  },
+  "src/components/layout/Sidebar.jsx": {
+    "mtime": 1787416945.4112518,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2d26c8b0393435fd8f93314290de5bbc",
+    "semantic_hash": "2d26c8b0393435fd8f93314290de5bbc"
+  },
+  "src/components/layout/TabBar.jsx": {
+    "mtime": 1787245044.790815,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e0eec938862eb4f1badda1bc87785073",
+    "semantic_hash": "e0eec938862eb4f1badda1bc87785073"
+  },
+  "src/components/layout/navegacion.js": {
+    "mtime": 1787242024.8097444,
+    "seen": 1788053777.5133545,
+    "ast_hash": "91af2006669252c13a97de06640a6319",
+    "semantic_hash": "91af2006669252c13a97de06640a6319"
+  },
+  "src/components/ui/Avatar.jsx": {
+    "mtime": 1787241958.6038704,
+    "seen": 1788053777.5133545,
+    "ast_hash": "aceaa53fb5aaaa5e3a6eb4153fe1ab3e",
+    "semantic_hash": "aceaa53fb5aaaa5e3a6eb4153fe1ab3e"
+  },
+  "src/components/ui/Aviso.jsx": {
+    "mtime": 1787246553.67782,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8476f5114cd2141d9c09c6788f8f572e",
+    "semantic_hash": "8476f5114cd2141d9c09c6788f8f572e"
+  },
+  "src/components/ui/AvisoError.jsx": {
+    "mtime": 1787243992.4213202,
+    "seen": 1788053777.5133545,
+    "ast_hash": "da7a700fa443b861f6a95c75b64fe835",
+    "semantic_hash": "da7a700fa443b861f6a95c75b64fe835"
+  },
+  "src/components/ui/Badge.jsx": {
+    "mtime": 1787241958.526281,
+    "seen": 1788053777.5133545,
+    "ast_hash": "7352144234904a345077db3bb3267a08",
+    "semantic_hash": "7352144234904a345077db3bb3267a08"
+  },
+  "src/components/ui/Boton.jsx": {
+    "mtime": 1787241958.5785868,
+    "seen": 1788053777.5133545,
+    "ast_hash": "869dcefae6606abdde1ad629c92722a2",
+    "semantic_hash": "869dcefae6606abdde1ad629c92722a2"
+  },
+  "src/components/ui/Buscador.jsx": {
+    "mtime": 1787241989.8164022,
+    "seen": 1788053777.5133545,
+    "ast_hash": "9dac7a34176c71c199efbe93c93fc465",
+    "semantic_hash": "9dac7a34176c71c199efbe93c93fc465"
+  },
+  "src/components/ui/Campo.jsx": {
+    "mtime": 1787241989.7897072,
+    "seen": 1788053777.5133545,
+    "ast_hash": "f00e99d582924b5a6996b7a4e424a78c",
+    "semantic_hash": "f00e99d582924b5a6996b7a4e424a78c"
+  },
+  "src/components/ui/Card.jsx": {
+    "mtime": 1787241958.5525806,
+    "seen": 1788053777.5133545,
+    "ast_hash": "4afad48d259b0c373ed0bca388d0d6b3",
+    "semantic_hash": "4afad48d259b0c373ed0bca388d0d6b3"
+  },
+  "src/components/ui/Cargando.jsx": {
+    "mtime": 1787243988.579023,
+    "seen": 1788053777.5133545,
+    "ast_hash": "21d1e94b03ba66912d9c1515f43ee0ed",
+    "semantic_hash": "21d1e94b03ba66912d9c1515f43ee0ed"
+  },
+  "src/components/ui/EstadoVacio.jsx": {
+    "mtime": 1787241989.8459628,
+    "seen": 1788053777.5133545,
+    "ast_hash": "7e19801283f9dd444660bb6874044d36",
+    "semantic_hash": "7e19801283f9dd444660bb6874044d36"
+  },
+  "src/components/ui/Modal.jsx": {
+    "mtime": 1787241989.7636535,
+    "seen": 1788053777.5133545,
+    "ast_hash": "66df4fdd2632e2a6d3a9ea3d1c9ac14d",
+    "semantic_hash": "66df4fdd2632e2a6d3a9ea3d1c9ac14d"
+  },
+  "src/components/ui/Segmentado.jsx": {
+    "mtime": 1787241989.8723118,
+    "seen": 1788053777.5133545,
+    "ast_hash": "17af23d2eff5d1af054e993d5317d21c",
+    "semantic_hash": "17af23d2eff5d1af054e993d5317d21c"
+  },
+  "src/features/agenda/CitaChip.jsx": {
+    "mtime": 1787949449.84913,
+    "seen": 1788053777.5133545,
+    "ast_hash": "f9ae3e7b1bc4e4ced9a02b2ce18cf7a4",
+    "semantic_hash": "f9ae3e7b1bc4e4ced9a02b2ce18cf7a4"
+  },
+  "src/features/agenda/CitaModal.jsx": {
+    "mtime": 1787949449.8501287,
+    "seen": 1788053777.5133545,
+    "ast_hash": "be3eb5aa64449202f47759d0476ed56f",
+    "semantic_hash": "be3eb5aa64449202f47759d0476ed56f"
+  },
+  "src/features/agenda/EventoPendiente.jsx": {
+    "mtime": 1787426290.553458,
+    "seen": 1788053777.5133545,
+    "ast_hash": "355d6b6508a03272c6f18122ca3695f6",
+    "semantic_hash": "355d6b6508a03272c6f18122ca3695f6"
+  },
+  "src/features/agenda/ListaDelDia.jsx": {
+    "mtime": 1787767890.9992428,
+    "seen": 1788053777.5133545,
+    "ast_hash": "d3c50060d4fc243cf359784e5bf22543",
+    "semantic_hash": "d3c50060d4fc243cf359784e5bf22543"
+  },
+  "src/features/agenda/TipoCitaBadge.jsx": {
+    "mtime": 1787949449.8511288,
+    "seen": 1788053777.5133545,
+    "ast_hash": "21b40753485f41f3cea51a08f8abe787",
+    "semantic_hash": "21b40753485f41f3cea51a08f8abe787"
+  },
+  "src/features/agenda/VistaMes.jsx": {
+    "mtime": 1787949449.8511288,
+    "seen": 1788053777.5133545,
+    "ast_hash": "04f64786bf62e9688d1546fec42d8494",
+    "semantic_hash": "04f64786bf62e9688d1546fec42d8494"
+  },
+  "src/features/agenda/VistaSemana.jsx": {
+    "mtime": 1787949449.8521287,
+    "seen": 1788053777.5133545,
+    "ast_hash": "9c5a2b9e7530cddf188f324b9031c30a",
+    "semantic_hash": "9c5a2b9e7530cddf188f324b9031c30a"
+  },
+  "src/features/ajustes/ConexionGoogle.jsx": {
+    "mtime": 1787949449.8521287,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b9ba9b20a82df0554f87c6782f0d01e9",
+    "semantic_hash": "b9ba9b20a82df0554f87c6782f0d01e9"
+  },
+  "src/features/ajustes/ConexionWhatsApp.jsx": {
+    "mtime": 1787437468.4088755,
+    "seen": 1788053777.5133545,
+    "ast_hash": "0359da23f6af6672409b31320cdb62b2",
+    "semantic_hash": "0359da23f6af6672409b31320cdb62b2"
+  },
+  "src/features/ajustes/DatosFiscales.jsx": {
+    "mtime": 1788051504.5079515,
+    "seen": 1788053777.5133545,
+    "ast_hash": "bf333179972b608a6e59775204a5f350",
+    "semantic_hash": "bf333179972b608a6e59775204a5f350"
+  },
+  "src/features/ajustes/HorarioTrabajo.jsx": {
+    "mtime": 1787768033.570406,
+    "seen": 1788053777.5133545,
+    "ast_hash": "15913db49606c960e9c86a1b41c124ef",
+    "semantic_hash": "15913db49606c960e9c86a1b41c124ef"
+  },
+  "src/features/consentimiento/LienzoFirma.jsx": {
+    "mtime": 1787572019.4444866,
+    "seen": 1788053777.5133545,
+    "ast_hash": "d0a9abd80198d26ed0f26abc9aec6966",
+    "semantic_hash": "d0a9abd80198d26ed0f26abc9aec6966"
+  },
+  "src/features/consentimiento/TextoLegal.jsx": {
+    "mtime": 1787571595.1391864,
+    "seen": 1788053777.5133545,
+    "ast_hash": "42e0e0d4bedae76322bab61dd12cda65",
+    "semantic_hash": "42e0e0d4bedae76322bab61dd12cda65"
+  },
+  "src/features/espera/EsperaFila.jsx": {
+    "mtime": 1787529360.9901824,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a9739dcefa22fdd01ebc24281539db13",
+    "semantic_hash": "a9739dcefa22fdd01ebc24281539db13"
+  },
+  "src/features/espera/EsperaModal.jsx": {
+    "mtime": 1787528891.1978838,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c4d816325f80c2f70d4637ec3a04e02a",
+    "semantic_hash": "c4d816325f80c2f70d4637ec3a04e02a"
+  },
+  "src/features/espera/HuecoLiberado.jsx": {
+    "mtime": 1787767985.9583662,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c314ad672c20312f7e963cbd93b7fdb1",
+    "semantic_hash": "c314ad672c20312f7e963cbd93b7fdb1"
+  },
+  "src/features/facturacion/BotonEmitir.jsx": {
+    "mtime": 1787502523.4737291,
+    "seen": 1788053777.5133545,
+    "ast_hash": "926860d7cf1653d9982a5fe7ff025698",
+    "semantic_hash": "926860d7cf1653d9982a5fe7ff025698"
+  },
+  "src/features/facturacion/BotonEnviarEmail.jsx": {
+    "mtime": 1787530357.6341565,
+    "seen": 1788053777.5133545,
+    "ast_hash": "5f815cd5e57405859b63a8dedf37dfe7",
+    "semantic_hash": "5f815cd5e57405859b63a8dedf37dfe7"
+  },
+  "src/features/facturacion/BotonPDF.jsx": {
+    "mtime": 1787530288.123346,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b3cce6dd866b8ab8e2e4428eb51c7e4d",
+    "semantic_hash": "b3cce6dd866b8ab8e2e4428eb51c7e4d"
+  },
+  "src/features/facturacion/EditarFacturaModal.jsx": {
+    "mtime": 1788051504.5094264,
+    "seen": 1788053777.5133545,
+    "ast_hash": "fd5f98cde1552e09183ae8c0186cdfe8",
+    "semantic_hash": "fd5f98cde1552e09183ae8c0186cdfe8"
+  },
+  "src/features/facturacion/EstadoPagoBadge.jsx": {
+    "mtime": 1787503292.3244054,
+    "seen": 1788053777.5133545,
+    "ast_hash": "61b62dcd34f50883f029276f30834f22",
+    "semantic_hash": "61b62dcd34f50883f029276f30834f22"
+  },
+  "src/features/facturacion/FacturaFila.jsx": {
+    "mtime": 1788051504.510827,
+    "seen": 1788053777.5133545,
+    "ast_hash": "54c4e8930c3f258affe9444f2fabb9d8",
+    "semantic_hash": "54c4e8930c3f258affe9444f2fabb9d8"
+  },
+  "src/features/facturacion/FacturaManualModal.jsx": {
+    "mtime": 1788049056.4054403,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6d41c1d3f8e4825e538de58392a88ef0",
+    "semantic_hash": "6d41c1d3f8e4825e538de58392a88ef0"
+  },
+  "src/features/facturacion/MetodoPagoBoton.jsx": {
+    "mtime": 1788036032.3412206,
+    "seen": 1788053777.5133545,
+    "ast_hash": "5ebd5eef8e85d4b8bb07cf9d00fa21d1",
+    "semantic_hash": "5ebd5eef8e85d4b8bb07cf9d00fa21d1"
+  },
+  "src/features/facturacion/RectificarModal.jsx": {
+    "mtime": 1787503241.8419855,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a504c710fe26da8aa743f09c962ad97c",
+    "semantic_hash": "a504c710fe26da8aa743f09c962ad97c"
+  },
+  "src/features/facturacion/datosPdfFactura.js": {
+    "mtime": 1788051504.510827,
+    "seen": 1788053777.5133545,
+    "ast_hash": "3f07911ddd940666679c130d79fc3fb4",
+    "semantic_hash": "3f07911ddd940666679c130d79fc3fb4"
+  },
+  "src/features/facturacion/pdfFactura.js": {
+    "mtime": 1788053125.2407544,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6bb2e4026d15a1f055282e6c9ec27173",
+    "semantic_hash": "6bb2e4026d15a1f055282e6c9ec27173"
+  },
+  "src/features/pacientes/ConsentimientoBadge.jsx": {
+    "mtime": 1787571743.204937,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8073cb3ee56422871eb69675eeeddf02",
+    "semantic_hash": "8073cb3ee56422871eb69675eeeddf02"
+  },
+  "src/features/pacientes/ConsentimientoCard.jsx": {
+    "mtime": 1787949440.6577795,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b16273fdce2680330b274edb74bc9d96",
+    "semantic_hash": "b16273fdce2680330b274edb74bc9d96"
+  },
+  "src/features/pacientes/DatoFicha.jsx": {
+    "mtime": 1787242735.2063227,
+    "seen": 1788053777.5133545,
+    "ast_hash": "1b2008627a7c025929c02eb9917309bd",
+    "semantic_hash": "1b2008627a7c025929c02eb9917309bd"
+  },
+  "src/features/pacientes/EliminarPacienteModal.jsx": {
+    "mtime": 1788043818.8621922,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a6e139eaf6386a2b6eec3112acf040ee",
+    "semantic_hash": "a6e139eaf6386a2b6eec3112acf040ee"
+  },
+  "src/features/pacientes/FirmaModal.jsx": {
+    "mtime": 1787949440.65878,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e4404c73a7f23447203c91388258091a",
+    "semantic_hash": "e4404c73a7f23447203c91388258091a"
+  },
+  "src/features/pacientes/ImportarExportarModal.jsx": {
+    "mtime": 1787949440.6597798,
+    "seen": 1788053777.5133545,
+    "ast_hash": "58338cadafe39b87006b381875ae7564",
+    "semantic_hash": "58338cadafe39b87006b381875ae7564"
+  },
+  "src/features/pacientes/PacienteCard.jsx": {
+    "mtime": 1788049056.40644,
+    "seen": 1788053777.5133545,
+    "ast_hash": "9df1838f494ffe5afcf5f9fa31621e09",
+    "semantic_hash": "9df1838f494ffe5afcf5f9fa31621e09"
+  },
+  "src/features/pacientes/PacienteModal.jsx": {
+    "mtime": 1788049056.4074428,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6b44f122b00756247a0ef4871c0131ce",
+    "semantic_hash": "6b44f122b00756247a0ef4871c0131ce"
+  },
+  "src/features/recordatorios/EstadoConfirmacionBadge.jsx": {
+    "mtime": 1787247339.749485,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a584a5e5b4f17b1d3f52d558c19d8966",
+    "semantic_hash": "a584a5e5b4f17b1d3f52d558c19d8966"
+  },
+  "src/features/recordatorios/RecordatorioCard.jsx": {
+    "mtime": 1787437236.8042202,
+    "seen": 1788053777.5133545,
+    "ast_hash": "14e8f7fb1437e2b36435190fc89e3842",
+    "semantic_hash": "14e8f7fb1437e2b36435190fc89e3842"
+  },
+  "src/hooks/useCitas.js": {
+    "mtime": 1787245068.7405844,
+    "seen": 1788053777.5133545,
+    "ast_hash": "cc43def3e0ae0cec50e23db2cd84cbf5",
+    "semantic_hash": "cc43def3e0ae0cec50e23db2cd84cbf5"
+  },
+  "src/hooks/useFacturas.js": {
+    "mtime": 1788034660.7330227,
+    "seen": 1788053777.5133545,
+    "ast_hash": "ba6296a7cc4cf624ee183ce20f8d3659",
+    "semantic_hash": "ba6296a7cc4cf624ee183ce20f8d3659"
+  },
+  "src/hooks/useListaEspera.js": {
+    "mtime": 1787767956.2561662,
+    "seen": 1788053777.5133545,
+    "ast_hash": "ed86cc6114cb61a61bc54baaf1d7bd29",
+    "semantic_hash": "ed86cc6114cb61a61bc54baaf1d7bd29"
+  },
+  "src/hooks/usePacientes.js": {
+    "mtime": 1787244060.4998736,
+    "seen": 1788053777.5133545,
+    "ast_hash": "33776af8e6de676813868f31869bd5ae",
+    "semantic_hash": "33776af8e6de676813868f31869bd5ae"
+  },
+  "src/hooks/useRecordatorios.js": {
+    "mtime": 1787247954.7321815,
+    "seen": 1788053777.5133545,
+    "ast_hash": "803112a2249b319224f10e6655b0d2e2",
+    "semantic_hash": "803112a2249b319224f10e6655b0d2e2"
+  },
+  "src/lib/consentimiento.js": {
+    "mtime": 1787949440.6627798,
+    "seen": 1788053777.5133545,
+    "ast_hash": "5afc0b56a4fc6f5c292c2953d10f3cdb",
+    "semantic_hash": "5afc0b56a4fc6f5c292c2953d10f3cdb"
+  },
+  "src/lib/csv.js": {
+    "mtime": 1787949440.6637807,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2a7c8d41008c8ac8f354a25eebfa83eb",
+    "semantic_hash": "2a7c8d41008c8ac8f354a25eebfa83eb"
+  },
+  "src/lib/espera.js": {
+    "mtime": 1787768469.0678442,
+    "seen": 1788053777.5133545,
+    "ast_hash": "918a7b7c52af22fabed88d7e04fea450",
+    "semantic_hash": "918a7b7c52af22fabed88d7e04fea450"
+  },
+  "src/lib/fechas.js": {
+    "mtime": 1787767883.0797691,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e6e408fff80c56b4227102f1dc8b0832",
+    "semantic_hash": "e6e408fff80c56b4227102f1dc8b0832"
+  },
+  "src/lib/formato.js": {
+    "mtime": 1787241738.3048258,
+    "seen": 1788053777.5133545,
+    "ast_hash": "fb8e0284c49a88f0d38a8c6d59664b8d",
+    "semantic_hash": "fb8e0284c49a88f0d38a8c6d59664b8d"
+  },
+  "src/lib/logo.js": {
+    "mtime": 1787508905.8994727,
+    "seen": 1788053777.5133545,
+    "ast_hash": "64d2616daa827d254bee77c6bceab6dc",
+    "semantic_hash": "64d2616daa827d254bee77c6bceab6dc"
+  },
+  "src/lib/menores.js": {
+    "mtime": 1787949440.6637807,
+    "seen": 1788053777.5133545,
+    "ast_hash": "f1ee02b6d81dcb4c168501c59f0bf7e1",
+    "semantic_hash": "f1ee02b6d81dcb4c168501c59f0bf7e1"
+  },
+  "src/lib/nif.js": {
+    "mtime": 1787505168.6902285,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6edcc14bac0c4f3558ec96dead03c22d",
+    "semantic_hash": "6edcc14bac0c4f3558ec96dead03c22d"
+  },
+  "src/lib/pacientesCsv.js": {
+    "mtime": 1787949440.6647797,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8d1e80143c0718f5cef8cebf3630593f",
+    "semantic_hash": "8d1e80143c0718f5cef8cebf3630593f"
+  },
+  "src/lib/supabase.js": {
+    "mtime": 1787243899.3916492,
+    "seen": 1788053777.5133545,
+    "ast_hash": "3b857b3c677e98ab479fd6f5063b7263",
+    "semantic_hash": "3b857b3c677e98ab479fd6f5063b7263"
+  },
+  "src/lib/tipos.js": {
+    "mtime": 1787504507.8973815,
+    "seen": 1788053777.5133545,
+    "ast_hash": "19714d62b1af2d2d745fcdd25ac3b705",
+    "semantic_hash": "19714d62b1af2d2d745fcdd25ac3b705"
+  },
+  "src/lib/xlsx.js": {
+    "mtime": 1787949440.6657794,
+    "seen": 1788053777.5133545,
+    "ast_hash": "ffc17f75151ebb779a7aab81109fab56",
+    "semantic_hash": "ffc17f75151ebb779a7aab81109fab56"
+  },
+  "src/main.jsx": {
+    "mtime": 1787242039.243822,
+    "seen": 1788053777.5133545,
+    "ast_hash": "155a46cdd770e84eb75a10e38c25be18",
+    "semantic_hash": "155a46cdd770e84eb75a10e38c25be18"
+  },
+  "src/pages/AjustesPage.jsx": {
+    "mtime": 1788044115.9255202,
+    "seen": 1788053777.5133545,
+    "ast_hash": "9a4d9de8128a75b5f9be988d0860a182",
+    "semantic_hash": "9a4d9de8128a75b5f9be988d0860a182"
+  },
+  "src/pages/CalendarioPage.jsx": {
+    "mtime": 1787949449.853129,
+    "seen": 1788053777.5133545,
+    "ast_hash": "47bc8e4b9c0d4e16ef8af6861b397b00",
+    "semantic_hash": "47bc8e4b9c0d4e16ef8af6861b397b00"
+  },
+  "src/pages/ConsentimientoPage.jsx": {
+    "mtime": 1787949440.6657794,
+    "seen": 1788053777.5133545,
+    "ast_hash": "0cab495a592448daf9fec5aac74b14ae",
+    "semantic_hash": "0cab495a592448daf9fec5aac74b14ae"
+  },
+  "src/pages/FacturacionPage.jsx": {
+    "mtime": 1788049056.4084466,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a8922d1c2ea68b41d6b07816f89e0b98",
+    "semantic_hash": "a8922d1c2ea68b41d6b07816f89e0b98"
+  },
+  "src/pages/ListaEsperaPage.jsx": {
+    "mtime": 1787767967.7791822,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c84133f83337fba8e50b231d20f74e12",
+    "semantic_hash": "c84133f83337fba8e50b231d20f74e12"
+  },
+  "src/pages/LoginPage.jsx": {
+    "mtime": 1788044109.0810862,
+    "seen": 1788053777.5133545,
+    "ast_hash": "d95c61e2176b483f2af477a924afe605",
+    "semantic_hash": "d95c61e2176b483f2af477a924afe605"
+  },
+  "src/pages/PacienteDetallePage.jsx": {
+    "mtime": 1788049056.4094443,
+    "seen": 1788053777.5133545,
+    "ast_hash": "53ceca3e0e42ff93f1a07465c8c56879",
+    "semantic_hash": "53ceca3e0e42ff93f1a07465c8c56879"
+  },
+  "src/pages/PacientesPage.jsx": {
+    "mtime": 1787949440.66778,
+    "seen": 1788053777.5133545,
+    "ast_hash": "bec3a34c55b75592eba8c8e7e64b9366",
+    "semantic_hash": "bec3a34c55b75592eba8c8e7e64b9366"
+  },
+  "src/pages/RecordatoriosPage.jsx": {
+    "mtime": 1787421398.6056104,
+    "seen": 1788053777.5133545,
+    "ast_hash": "087dbb96e4a8fa5c0b468f0641113bfe",
+    "semantic_hash": "087dbb96e4a8fa5c0b468f0641113bfe"
+  },
+  "src/pages/RevisarEventosPage.jsx": {
+    "mtime": 1787426316.326122,
+    "seen": 1788053777.5133545,
+    "ast_hash": "5146486389e11c90bcc3a26468769870",
+    "semantic_hash": "5146486389e11c90bcc3a26468769870"
+  },
+  "src/services/ajustes.js": {
+    "mtime": 1787767925.12201,
+    "seen": 1788053777.5133545,
+    "ast_hash": "cbbe299f6b3d76fd944e6a2bd430c8da",
+    "semantic_hash": "cbbe299f6b3d76fd944e6a2bd430c8da"
+  },
+  "src/services/base.js": {
+    "mtime": 1787416875.7539928,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8d6fd525d01146809da60f8280a0565a",
+    "semantic_hash": "8d6fd525d01146809da60f8280a0565a"
+  },
+  "src/services/citas.js": {
+    "mtime": 1787949449.853129,
+    "seen": 1788053777.5133545,
+    "ast_hash": "730ee50bc7cedcb5309b29276c37adc1",
+    "semantic_hash": "730ee50bc7cedcb5309b29276c37adc1"
+  },
+  "src/services/consentimiento.js": {
+    "mtime": 1787949440.66778,
+    "seen": 1788053777.5133545,
+    "ast_hash": "efddddc5defb6e795b81aa1df9c0b2a0",
+    "semantic_hash": "efddddc5defb6e795b81aa1df9c0b2a0"
+  },
+  "src/services/correo.js": {
+    "mtime": 1787531506.5057771,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6b6aa56f0de2a4a123ba1c182791a041",
+    "semantic_hash": "6b6aa56f0de2a4a123ba1c182791a041"
+  },
+  "src/services/eventosPendientes.js": {
+    "mtime": 1787426252.8430772,
+    "seen": 1788053777.5133545,
+    "ast_hash": "d4a12d7e6841c24afcff1246be878201",
+    "semantic_hash": "d4a12d7e6841c24afcff1246be878201"
+  },
+  "src/services/facturas.js": {
+    "mtime": 1788051871.0750477,
+    "seen": 1788053777.5133545,
+    "ast_hash": "bb5f9d07ebc3339e43f091401d4c16b9",
+    "semantic_hash": "bb5f9d07ebc3339e43f091401d4c16b9"
+  },
+  "src/services/googleCalendar.js": {
+    "mtime": 1787425098.3164506,
+    "seen": 1788053777.5133545,
+    "ast_hash": "fa22a0e25fa31b9435b4f3210a8d5024",
+    "semantic_hash": "fa22a0e25fa31b9435b4f3210a8d5024"
+  },
+  "src/services/listaEspera.js": {
+    "mtime": 1787768476.7904055,
+    "seen": 1788053777.5133545,
+    "ast_hash": "13b2d288c123bed1e33318bb9b7bee0e",
+    "semantic_hash": "13b2d288c123bed1e33318bb9b7bee0e"
+  },
+  "src/services/pacientes.js": {
+    "mtime": 1788049056.4117787,
+    "seen": 1788053777.5133545,
+    "ast_hash": "88efc2c7a1b5676bef98ec4d817b72ac",
+    "semantic_hash": "88efc2c7a1b5676bef98ec4d817b72ac"
+  },
+  "src/services/recordatorios.js": {
+    "mtime": 1787437225.2561996,
+    "seen": 1788053777.5133545,
+    "ast_hash": "562521daeebf828b8e5d617bb3c66743",
+    "semantic_hash": "562521daeebf828b8e5d617bb3c66743"
+  },
+  "src/services/verifacti.js": {
+    "mtime": 1788051504.5141604,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c1a902ceaa056fd84d04358aec2eaf9e",
+    "semantic_hash": "c1a902ceaa056fd84d04358aec2eaf9e"
+  },
+  "src/store/AuthContext.jsx": {
+    "mtime": 1787243979.480738,
+    "seen": 1788053777.5133545,
+    "ast_hash": "0b0b010b4c6cdfbd4b69c6a92e1de3c1",
+    "semantic_hash": "0b0b010b4c6cdfbd4b69c6a92e1de3c1"
+  },
+  "supabase/functions/_shared/consentimiento.ts": {
+    "mtime": 1787949440.6697795,
+    "seen": 1788053777.5133545,
+    "ast_hash": "369812c2bab62d3cfbcb628120ce54d7",
+    "semantic_hash": "369812c2bab62d3cfbcb628120ce54d7"
+  },
+  "supabase/functions/_shared/cors.ts": {
+    "mtime": 1787416773.1903567,
+    "seen": 1788053777.5133545,
+    "ast_hash": "907b284bd35933ec8e230e2d684399c1",
+    "semantic_hash": "907b284bd35933ec8e230e2d684399c1"
+  },
+  "supabase/functions/_shared/email.ts": {
+    "mtime": 1787531482.9784875,
+    "seen": 1788053777.5133545,
+    "ast_hash": "fe9d5c8812dad214f6291a1ef8c53ede",
+    "semantic_hash": "fe9d5c8812dad214f6291a1ef8c53ede"
+  },
+  "supabase/functions/_shared/google.ts": {
+    "mtime": 1787416758.7579598,
+    "seen": 1788053777.5133545,
+    "ast_hash": "91c69aeb118c2afbdaf7bb9c1440eaa0",
+    "semantic_hash": "91c69aeb118c2afbdaf7bb9c1440eaa0"
+  },
+  "supabase/functions/_shared/recordatorio.ts": {
+    "mtime": 1787437499.9387338,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8f993f6106756b9fffc9ffbab3e1838f",
+    "semantic_hash": "8f993f6106756b9fffc9ffbab3e1838f"
+  },
+  "supabase/functions/_shared/supabase.ts": {
+    "mtime": 1787416770.0227766,
+    "seen": 1788053777.5133545,
+    "ast_hash": "07a9022807bdd153f3a811d31bd68250",
+    "semantic_hash": "07a9022807bdd153f3a811d31bd68250"
+  },
+  "supabase/functions/_shared/verifacti.ts": {
+    "mtime": 1788051504.5151577,
+    "seen": 1788053777.5133545,
+    "ast_hash": "111d116099a8f1faccb50e986990ab17",
+    "semantic_hash": "111d116099a8f1faccb50e986990ab17"
+  },
+  "supabase/functions/_shared/whatsapp.ts": {
+    "mtime": 1787436929.7617455,
+    "seen": 1788053777.5133545,
+    "ast_hash": "ab8fef6e0a05b22b65b6f4beec52a52b",
+    "semantic_hash": "ab8fef6e0a05b22b65b6f4beec52a52b"
+  },
+  "supabase/functions/consentimiento-firmar/index.ts": {
+    "mtime": 1787949440.6707795,
+    "seen": 1788053777.5133545,
+    "ast_hash": "79d8f69b6b71459b2f91077fc0890674",
+    "semantic_hash": "79d8f69b6b71459b2f91077fc0890674"
+  },
+  "supabase/functions/consentimiento-ver/index.ts": {
+    "mtime": 1787949440.6707795,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2b6948b04c92738b79da4324191c08d7",
+    "semantic_hash": "2b6948b04c92738b79da4324191c08d7"
+  },
+  "supabase/functions/enviar-consentimiento/index.ts": {
+    "mtime": 1787949440.6717794,
+    "seen": 1788053777.5133545,
+    "ast_hash": "25b506b83b1ee350f73717bb7fefbb6f",
+    "semantic_hash": "25b506b83b1ee350f73717bb7fefbb6f"
+  },
+  "supabase/functions/enviar-factura-email/index.ts": {
+    "mtime": 1787531501.5499492,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a72bdbece9241d88be9b5927126279a7",
+    "semantic_hash": "a72bdbece9241d88be9b5927126279a7"
+  },
+  "supabase/functions/enviar-recordatorio-whatsapp/index.ts": {
+    "mtime": 1787437000.3786085,
+    "seen": 1788053777.5133545,
+    "ast_hash": "33a733213fb6b3dbcaf744ec8c0d1444",
+    "semantic_hash": "33a733213fb6b3dbcaf744ec8c0d1444"
+  },
+  "supabase/functions/enviar-recordatorios-automaticos/index.ts": {
+    "mtime": 1787437047.6146495,
+    "seen": 1788053777.5133545,
+    "ast_hash": "4b6dd624dcf3d53320bb361992ba6b0a",
+    "semantic_hash": "4b6dd624dcf3d53320bb361992ba6b0a"
+  },
+  "supabase/functions/generar-factura/index.ts": {
+    "mtime": 1788051504.5161583,
+    "seen": 1788053777.5133545,
+    "ast_hash": "342e724af8623934356027f5ed27b24c",
+    "semantic_hash": "342e724af8623934356027f5ed27b24c"
+  },
+  "supabase/functions/google-desconectar/index.ts": {
+    "mtime": 1787416823.4325778,
+    "seen": 1788053777.5133545,
+    "ast_hash": "016101d6fd92a41f3d591d4add40326a",
+    "semantic_hash": "016101d6fd92a41f3d591d4add40326a"
+  },
+  "supabase/functions/google-oauth-callback/index.ts": {
+    "mtime": 1787416812.6792037,
+    "seen": 1788053777.5133545,
+    "ast_hash": "917111ae7de22bd61dce238f2baebd62",
+    "semantic_hash": "917111ae7de22bd61dce238f2baebd62"
+  },
+  "supabase/functions/google-oauth-start/index.ts": {
+    "mtime": 1787416795.8005471,
+    "seen": 1788053777.5133545,
+    "ast_hash": "58c1c945a9bb6221d3e63e5327396765",
+    "semantic_hash": "58c1c945a9bb6221d3e63e5327396765"
+  },
+  "supabase/functions/sincronizar-desde-google/index.ts": {
+    "mtime": 1787949449.854635,
+    "seen": 1788053777.5133545,
+    "ast_hash": "944d788aa81385092717c535a4607395",
+    "semantic_hash": "944d788aa81385092717c535a4607395"
+  },
+  "supabase/functions/sincronizar-estado-facturas/index.ts": {
+    "mtime": 1787501830.0533638,
+    "seen": 1788053777.5133545,
+    "ast_hash": "869c3d31311cae4445e040eb7dd16533",
+    "semantic_hash": "869c3d31311cae4445e040eb7dd16533"
+  },
+  "supabase/functions/sync-cita-a-google/index.ts": {
+    "mtime": 1787418817.1808493,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a7f9c3b862863844061ef7d603b9e60e",
+    "semantic_hash": "a7f9c3b862863844061ef7d603b9e60e"
+  },
+  "supabase/functions/webhook-whatsapp/index.ts": {
+    "mtime": 1787437155.3820605,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e330f8fd0bbc40c8fe1a02228d2c5e55",
+    "semantic_hash": "e330f8fd0bbc40c8fe1a02228d2c5e55"
+  },
+  "supabase/migrations/0001_auth_psicologa_automatica_y_realtime.sql": {
+    "mtime": 1787244233.7012043,
+    "seen": 1788053777.5133545,
+    "ast_hash": "7621c0b16ce4f6896b6988e14107d23e",
+    "semantic_hash": "7621c0b16ce4f6896b6988e14107d23e"
+  },
+  "supabase/migrations/0002_acompanante_numeracion_facturas_y_seguridad.sql": {
+    "mtime": 1787244872.7828004,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2dd6f9793e435732581fb3b41de17269",
+    "semantic_hash": "2dd6f9793e435732581fb3b41de17269"
+  },
+  "supabase/migrations/0003_politica_update_recordatorios.sql": {
+    "mtime": 1787247927.7347524,
+    "seen": 1788053777.5133545,
+    "ast_hash": "d14b731e60636234242cbc0f1c1a9711",
+    "semantic_hash": "d14b731e60636234242cbc0f1c1a9711"
+  },
+  "supabase/migrations/0004_google_calendar_credenciales.sql": {
+    "mtime": 1787417457.7810695,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2e67560c6eb957fc6fd571926f91dfea",
+    "semantic_hash": "2e67560c6eb957fc6fd571926f91dfea"
+  },
+  "supabase/migrations/0005_google_sondeo_cada_10_minutos.sql": {
+    "mtime": 1787419465.6662655,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2dc25f1c33b6d534da93f2a1ce0810ea",
+    "semantic_hash": "2dc25f1c33b6d534da93f2a1ce0810ea"
+  },
+  "supabase/migrations/0006_whatsapp_business.sql": {
+    "mtime": 1787421089.6344903,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b9455e4a8f33d0d6e1b8444f24ab2a1e",
+    "semantic_hash": "b9455e4a8f33d0d6e1b8444f24ab2a1e"
+  },
+  "supabase/migrations/0007_importar_agenda_de_google.sql": {
+    "mtime": 1787425691.1401389,
+    "seen": 1788053777.5133545,
+    "ast_hash": "1588586d00683235366ffccd71a1b3dc",
+    "semantic_hash": "1588586d00683235366ffccd71a1b3dc"
+  },
+  "supabase/migrations/0008_recordatorios_whatsapp_automaticos.sql": {
+    "mtime": 1787437818.7994497,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c57c5e5c812dde8750dd958200453af3",
+    "semantic_hash": "c57c5e5c812dde8750dd958200453af3"
+  },
+  "supabase/migrations/0009_facturacion_metodo_pago_y_rectificativas.sql": {
+    "mtime": 1787500063.6978345,
+    "seen": 1788053777.5133545,
+    "ast_hash": "816a8c5f444ee5220fe111bc73db37e5",
+    "semantic_hash": "816a8c5f444ee5220fe111bc73db37e5"
+  },
+  "supabase/migrations/0010_verifactu_estado_y_serie_rectificativa.sql": {
+    "mtime": 1787500097.0048268,
+    "seen": 1788053777.5133545,
+    "ast_hash": "1636b010c6a179e65061f97a8b133083",
+    "semantic_hash": "1636b010c6a179e65061f97a8b133083"
+  },
+  "supabase/migrations/0011_indice_estado_verifactu_correcto.sql": {
+    "mtime": 1787501803.3210597,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e6876e5cf87b934ea19c76da706ff4dd",
+    "semantic_hash": "e6876e5cf87b934ea19c76da706ff4dd"
+  },
+  "supabase/migrations/0012_una_factura_normal_por_sesion.sql": {
+    "mtime": 1787503049.6087008,
+    "seen": 1788053777.5133545,
+    "ast_hash": "58b64662d270ac265d0db5e3f9c09264",
+    "semantic_hash": "58b64662d270ac265d0db5e3f9c09264"
+  },
+  "supabase/migrations/0013_quitar_indice_rectificada_redundante.sql": {
+    "mtime": 1787503729.843857,
+    "seen": 1788053777.5133545,
+    "ast_hash": "2e35bb5765171fac075db8a3a0d86292",
+    "semantic_hash": "2e35bb5765171fac075db8a3a0d86292"
+  },
+  "supabase/migrations/0014_logo_de_la_consulta.sql": {
+    "mtime": 1787508869.5214658,
+    "seen": 1788053777.5133545,
+    "ast_hash": "63b28fcedf1a26dfbe44761b72c466dc",
+    "semantic_hash": "63b28fcedf1a26dfbe44761b72c466dc"
+  },
+  "supabase/migrations/0015_facturacion_automatica_de_citas_pasadas.sql": {
+    "mtime": 1787518180.200153,
+    "seen": 1788053777.5133545,
+    "ast_hash": "8dda9bb76a42f2df548ab07b9ebafda6",
+    "semantic_hash": "8dda9bb76a42f2df548ab07b9ebafda6"
+  },
+  "supabase/migrations/0016_lista_de_espera.sql": {
+    "mtime": 1787528718.2505972,
+    "seen": 1788053777.5133545,
+    "ast_hash": "c3d6dab2183f2c5a8719fa7baeb68b2d",
+    "semantic_hash": "c3d6dab2183f2c5a8719fa7baeb68b2d"
+  },
+  "supabase/migrations/0017_envio_de_factura_por_email.sql": {
+    "mtime": 1787530150.4985826,
+    "seen": 1788053777.5133545,
+    "ast_hash": "29355426cf5a979f75a8826cecc2a2ea",
+    "semantic_hash": "29355426cf5a979f75a8826cecc2a2ea"
+  },
+  "supabase/migrations/0018_consentimiento_informado_firmado.sql": {
+    "mtime": 1787572553.0459797,
+    "seen": 1788053777.5133545,
+    "ast_hash": "86f39132344ca1778839fbd1c8fdd17b",
+    "semantic_hash": "86f39132344ca1778839fbd1c8fdd17b"
+  },
+  "supabase/migrations/0019_horario_de_trabajo.sql": {
+    "mtime": 1787767866.6470876,
+    "seen": 1788053777.5133545,
+    "ast_hash": "f8653f4f8326115bb498dac6777d87a0",
+    "semantic_hash": "f8653f4f8326115bb498dac6777d87a0"
+  },
+  "supabase/migrations/0020_eliminar_paciente.sql": {
+    "mtime": 1787949440.6732914,
+    "seen": 1788053777.5133545,
+    "ast_hash": "51cce2f6f6d477b22c9b651057fee314",
+    "semantic_hash": "51cce2f6f6d477b22c9b651057fee314"
+  },
+  "supabase/migrations/0021_progenitores_de_menores.sql": {
+    "mtime": 1787949440.6732914,
+    "seen": 1788053777.5133545,
+    "ast_hash": "be93f835f89a201ddb53b221236109cc",
+    "semantic_hash": "be93f835f89a201ddb53b221236109cc"
+  },
+  "supabase/migrations/0022_consentimiento_de_varios_firmantes.sql": {
+    "mtime": 1787949440.6742916,
+    "seen": 1788053777.5133545,
+    "ast_hash": "efea23111444b204b03a4d940a2c6109",
+    "semantic_hash": "efea23111444b204b03a4d940a2c6109"
+  },
+  "supabase/migrations/0023_trigger_consentimiento_no_es_rpc.sql": {
+    "mtime": 1787949440.6742916,
+    "seen": 1788053777.5133545,
+    "ast_hash": "6ac97f5cebf22eae5b75c68fd1e3d5ba",
+    "semantic_hash": "6ac97f5cebf22eae5b75c68fd1e3d5ba"
+  },
+  "supabase/migrations/0024_facturacion_particulares_y_empresas.sql": {
+    "mtime": 1788049056.4127727,
+    "seen": 1788053777.5133545,
+    "ast_hash": "896177686b52449ee8599c1763d388e3",
+    "semantic_hash": "896177686b52449ee8599c1763d388e3"
+  },
+  "supabase/migrations/0025_arregla_contador_facturas.sql": {
+    "mtime": 1788049080.3495307,
+    "seen": 1788053777.5133545,
+    "ast_hash": "9bcd422a1a73133d0e491aad21c582b2",
+    "semantic_hash": "9bcd422a1a73133d0e491aad21c582b2"
+  },
+  "supabase/migrations/0026_iban_para_la_factura.sql": {
+    "mtime": 1788051504.5171583,
+    "seen": 1788053777.5133545,
+    "ast_hash": "e2fee5d1c2de10ba2104b38a653b5161",
+    "semantic_hash": "e2fee5d1c2de10ba2104b38a653b5161"
+  },
+  "vercel.json": {
+    "mtime": 1787571833.44366,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b27a556809646df721067142b86764e3",
+    "semantic_hash": "b27a556809646df721067142b86764e3"
+  },
+  "vite.config.js": {
+    "mtime": 1787241658.9260976,
+    "seen": 1788053777.5133545,
+    "ast_hash": "fbe603e9fee5feb98c375b8c6d21d072",
+    "semantic_hash": "fbe603e9fee5feb98c375b8c6d21d072"
+  },
+  "README.md": {
+    "mtime": 1788036066.3341608,
+    "seen": 1788053777.5133545,
+    "ast_hash": "b1d5e8e78b2c68a0268868d39e6716c6",
+    "semantic_hash": "b1d5e8e78b2c68a0268868d39e6716c6"
+  },
+  "public/condiciones.html": {
+    "mtime": 1788044097.5012493,
+    "seen": 1788053777.5133545,
+    "ast_hash": "0f7869a19a4d1afda1a219e897c1b31e",
+    "semantic_hash": "0f7869a19a4d1afda1a219e897c1b31e"
+  },
+  "public/privacidad.html": {
+    "mtime": 1788043103.931698,
+    "seen": 1788053777.5133545,
+    "ast_hash": "52059a85c41ac9011da9c6602b21d0b3",
+    "semantic_hash": "52059a85c41ac9011da9c6602b21d0b3"
+  },
+  "public/favicon.svg": {
+    "mtime": 1787242474.6312847,
+    "seen": 1788053777.5133545,
+    "ast_hash": "a4ebaadcc5c2dff78fbf94cfeb43d501",
+    "semantic_hash": "a4ebaadcc5c2dff78fbf94cfeb43d501"
+  },
+  "public/logo-psicofactur.png": {
+    "mtime": 1787949440.6557734,
+    "seen": 1788053777.5133545,
+    "ast_hash": "4514cca7ddcedefe9c925373cb1b789a",
+    "semantic_hash": "4514cca7ddcedefe9c925373cb1b789a"
+  },
+  "public/pwa-512.png": {
+    "mtime": 1787242467.469172,
+    "seen": 1788053777.5133545,
+    "ast_hash": "3c7eb60ba12652ca4f59c4dac16af9b2",
+    "semantic_hash": "3c7eb60ba12652ca4f59c4dac16af9b2"
+  }
+}
