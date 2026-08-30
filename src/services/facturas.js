@@ -132,18 +132,30 @@ function deFila(fila) {
   }
 }
 
+/* PostgREST corta cada respuesta en 1000 filas (el `max-rows` de
+   Supabase). Sin paginar, en cuanto la consulta pasó de mil facturas
+   dejaban de llegar las más antiguas: como se ordena por fecha de
+   emisión, «desaparecía» de la pantalla un mes entero de golpe. */
+const TAMANO_PAGINA = 1000
+
 /** Todas las facturas, de la más reciente a la más antigua */
 export async function getFacturas() {
-  const { data, error } = await ejecutar(
-    supabase
-      .from('facturas')
-      .select(COLUMNAS)
-      .order('fecha_emision', { ascending: false })
-      .order('numero_factura', { ascending: false }),
-    'cargar las facturas',
-  )
-  if (error) return { data: null, error }
-  return exito(data.map(deFila))
+  const filas = []
+  for (let desde = 0; ; desde += TAMANO_PAGINA) {
+    const { data, error } = await ejecutar(
+      supabase
+        .from('facturas')
+        .select(COLUMNAS)
+        .order('fecha_emision', { ascending: false })
+        .order('numero_factura', { ascending: false })
+        .range(desde, desde + TAMANO_PAGINA - 1),
+      'cargar las facturas',
+    )
+    if (error) return { data: null, error }
+    filas.push(...data)
+    if (data.length < TAMANO_PAGINA) break
+  }
+  return exito(filas.map(deFila))
 }
 
 export async function getFacturasDePaciente(pacienteId) {
