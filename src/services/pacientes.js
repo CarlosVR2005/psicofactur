@@ -157,6 +157,26 @@ export async function actualizarPaciente(id, datos) {
   return exito(deFila(data))
 }
 
+/**
+ * Guarda sólo las observaciones, sin tocar el resto de la ficha.
+ * Para el botón de editar en línea de la propia ficha: así no hace
+ * falta abrir el modal entero ni arriesgarse a pisar otros campos.
+ */
+export async function actualizarObservaciones(id, texto) {
+  const observaciones = texto?.trim() ? texto.trim() : null
+  const { data, error } = await ejecutar(
+    supabase
+      .from('pacientes')
+      .update({ observaciones })
+      .eq('id', id)
+      .select(COLUMNAS)
+      .single(),
+    'guardar las observaciones',
+  )
+  if (error) return { data: null, error }
+  return exito(deFila(data))
+}
+
 /** Archivar / reactivar (nunca se borra físicamente) */
 export async function cambiarActivo(id, activo) {
   const { data, error } = await ejecutar(

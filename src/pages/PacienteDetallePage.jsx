@@ -11,7 +11,6 @@ import {
   IdCard,
   Mail,
   MessageCircle,
-  NotebookPen,
   Pencil,
   Phone,
   ShieldAlert,
@@ -31,6 +30,7 @@ import DatoFicha from '../features/pacientes/DatoFicha'
 import PacienteModal from '../features/pacientes/PacienteModal'
 import EliminarPacienteModal from '../features/pacientes/EliminarPacienteModal'
 import ConsentimientoCard from '../features/pacientes/ConsentimientoCard'
+import ObservacionesCard from '../features/pacientes/ObservacionesCard'
 import HistoriaClinica from '../features/pacientes/HistoriaClinica'
 import CitaModal from '../features/agenda/CitaModal'
 import TipoCitaBadge from '../features/agenda/TipoCitaBadge'
@@ -340,15 +340,7 @@ export default function PacienteDetallePage() {
             alEditarFicha={() => setEditando(true)}
           />
 
-          <Card className="p-5 sm:p-6">
-            <h2 className="mb-3 flex items-center gap-2 font-semibold text-tinta">
-              <NotebookPen className="size-4.5 text-tinta-tenue" strokeWidth={1.9} />
-              Observaciones
-            </h2>
-            <p className="whitespace-pre-line leading-relaxed text-tinta-suave">
-              {paciente.observaciones || 'Sin observaciones todavía.'}
-            </p>
-          </Card>
+          <ObservacionesCard paciente={paciente} alGuardar={setPaciente} />
 
           {/* Próximas citas */}
           <Card className="p-5 sm:p-6">
