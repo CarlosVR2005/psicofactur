@@ -9,14 +9,16 @@ import { aClave, hoy } from '../lib/fechas'
    `idx_facturas_cita_unica`, así que una misma cita no se puede
    facturar dos veces.
 
-   El `numero_factura` NO se pone aquí: lo asigna el trigger
-   `asignar_numero_factura()` leyendo el contador por psicóloga, año y
-   serie. Así es imposible que salgan dos facturas con el mismo número.
+   El `numero_factura` NO se pone aquí, y NO se pone al crear la fila: lo
+   asigna el trigger `asignar_numero_factura()` cuando la factura se
+   EMITE (`emitida_at` deja de ser null), leyendo el contador por
+   psicóloga, año y serie (migración 0029). Un borrador no tiene número;
+   así la numeración es correlativa, sin huecos y en orden de emisión,
+   como exige el RD 1619/2012.
 
    Crear la fila NO es emitir la factura. Esto sólo la apunta en casa;
-   registrarla en la AEAT es otra cosa y la hace `services/verifacti.js`
-   a través de la Edge Function. Mientras `verifactu_id` esté vacío, la
-   factura existe aquí pero Hacienda no sabe nada de ella.
+   emitirla la cierra (`emitida_at`) y, si Veri*Factu está activo, la
+   registra en la AEAT (`services/verifacti.js` + Edge Function).
    ================================================================ */
 
 const COLUMNAS = `
@@ -51,7 +53,9 @@ function deFila(fila) {
   const sesion = fila.cita?.fecha_hora ? new Date(fila.cita.fecha_hora) : null
   return {
     id: fila.id,
-    numero: fila.numero_factura ?? '—',
+    // El número nace al emitir (trigger `asignar_numero_factura`, migración
+    // 0029). Un borrador todavía no lo tiene.
+    numero: fila.numero_factura ?? 'Borrador',
     pacienteId: fila.paciente_id,
     pacienteNombre: fila.paciente?.nombre ?? 'Paciente',
     // Hace falta para el PDF: sin DNI la factura salió simplificada
@@ -402,7 +406,12 @@ export async function emitirFacturaLocal(facturaId) {
   }
 
   const hoyClave = aClave(hoy())
-  const anoDelNumero = String(factura.numero_factura ?? '').match(/(\d{4})\//)?.[1]
+  /* El número nace al emitir (migración 0029), así que un borrador no
+     trae número que comprobar. Esto solo salta al reemitir algo que ya
+     tenía número de un año anterior. */
+  const anoDelNumero = factura.numero_factura
+    ? String(factura.numero_factura).match(/(\d{4})\//)?.[1]
+    : null
   if (anoDelNumero && anoDelNumero !== hoyClave.slice(0, 4)) {
     return fallo(
       new Error('otro año'),

@@ -60,35 +60,49 @@ const MENCION_EXENCION_IGIC = {
   DEFECTO: 'Operación exenta de IGIC conforme a la Ley 20/1991, de 7 de junio.',
 }
 
-/* El hueco del logo. El QR mide 35 mm centrado en una página de 210,
-   así que empieza en x = 87,5. Con el margen de 20, quedan 67,5 mm
-   hasta él; nos quedamos en 50 para dejar un pasillo visible. */
+/* El hueco del logo.
+
+   · CON QR (Veri*Factu): el QR mide 35 mm centrado en una página de 210,
+     así que empieza en x = 87,5. Con el margen de 20 quedan 67,5 mm
+     hasta él; el logo se queda en 50 × 25 para dejar un pasillo y no
+     descentrar el QR, que la Orden HAC/1177/2024 exige centrado.
+   · SIN QR (factura ordinaria): no hay QR que respetar, así que el logo
+     va de membrete, grande y pegado arriba a la izquierda. */
 const LOGO_ANCHO_MAX = 50
 const LOGO_ALTO_MAX = 25
+const LOGO_ANCHO_MAX_MEMBRETE = 70
+const LOGO_ALTO_MAX_MEMBRETE = 38
 
 /**
- * Pinta el logo dentro de su hueco, sin deformarlo y centrado en
- * vertical respecto a la banda del QR.
+ * Pinta el logo sin deformarlo, pegado al margen izquierdo. Devuelve la
+ * `y` del borde inferior del logo dibujado (o la `y` de entrada si no se
+ * pudo dibujar).
  *
  * Si el logo estuviera corrupto o en un formato que jsPDF no entiende,
  * la factura se emite igual sin él: es preferible una factura sin logo
  * que ninguna factura.
+ *
+ * @param {{anchoMax?: number, altoMax?: number, centrarEnBanda?: boolean}} opciones
+ *   `centrarEnBanda` centra el logo en la altura de la banda del QR.
  */
-function dibujarLogo(doc, logo, yBanda) {
+function dibujarLogo(doc, logo, y, opciones = {}) {
+  const {
+    anchoMax = LOGO_ANCHO_MAX,
+    altoMax = LOGO_ALTO_MAX,
+    centrarEnBanda = false,
+  } = opciones
   try {
     const props = doc.getImageProperties(logo)
-    const escala = Math.min(
-      LOGO_ANCHO_MAX / props.width,
-      LOGO_ALTO_MAX / props.height,
-    )
+    const escala = Math.min(anchoMax / props.width, altoMax / props.height)
     const ancho = props.width * escala
     const alto = props.height * escala
 
-    // Centrado en la altura del QR, para que no baile respecto a él
-    const y = yBanda + (QR_MM - alto) / 2
-    doc.addImage(logo, 'PNG', MARGEN, y, ancho, alto)
+    const yTop = centrarEnBanda ? y + (QR_MM - alto) / 2 : y
+    doc.addImage(logo, 'PNG', MARGEN, yTop, ancho, alto)
+    return yTop + alto
   } catch (e) {
     console.error('[Psicofactur] no se ha podido dibujar el logo:', e)
+    return y
   }
 }
 
@@ -135,17 +149,16 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
 
   /* ---------- El logo, arriba a la izquierda ----------
 
-     Va en la misma banda que el QR pero pegado al margen izquierdo, y
-     con el ancho limitado a propósito: el QR tiene que quedar centrado
-     entre los márgenes porque lo exige la Orden HAC/1177/2024, y si el
-     logo creciera se lo comería. El tope (LOGO_ANCHO_MAX) deja un
-     pasillo libre antes de donde empieza el QR.
+     CON QR: va en la banda del QR, pegado al margen izquierdo y con el
+     ancho limitado, porque el QR tiene que quedar centrado entre los
+     márgenes (Orden HAC/1177/2024) y un logo más ancho se lo comería. Se
+     dibuja antes que el QR para que, si se solaparan, el QR quede encima.
 
-     Se dibuja antes que el QR para que, si alguna vez se solaparan por
-     un logo rarísimo, el QR quede encima: es el que tiene que poder
-     leerse. */
-  if (emisor?.logo) {
-    dibujarLogo(doc, emisor.logo, y)
+     SIN QR: no hay QR que respetar, así que el logo va de membrete,
+     grande y anclado arriba a la izquierda, y el resto del contenido
+     empieza por debajo. */
+  if (emisor?.logo && factura.qrUrl) {
+    dibujarLogo(doc, emisor.logo, y, { centrarEnBanda: true })
   }
 
   /* ---------- El QR, arriba del todo ----------
@@ -173,9 +186,12 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
     doc.setTextColor(0)
     y += 12
   } else if (emisor?.logo) {
-    /* Sin QR (Veri*Factu apagado) no hay banda superior que reserve
-       sitio: se baja `y` por debajo del logo para que no pise el título. */
-    y += LOGO_ALTO_MAX + 8
+    // Membrete: logo grande arriba a la izquierda; el contenido sigue debajo.
+    const yLogo = dibujarLogo(doc, emisor.logo, y, {
+      anchoMax: LOGO_ANCHO_MAX_MEMBRETE,
+      altoMax: LOGO_ALTO_MAX_MEMBRETE,
+    })
+    y = yLogo + 10
   }
 
   /* ---------- Cabecera: qué documento es ---------- */

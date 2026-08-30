@@ -11,15 +11,17 @@
 
    El orden importa y no es casual:
 
-     1) primero se crea la fila en `facturas`, que es quien asigna el
-        número por el trigger;
-     2) después se envía a Verifacti con ESE número.
+     1) se crea (o se reutiliza) la fila en `facturas`, todavía SIN número;
+     2) al ir a emitir se le pone `emitida_at` —paso «3 bis»—, y ese es
+        el momento en que el trigger `asignar_numero_factura` le asigna
+        su número (migración 0029);
+     3) después se envía a Verifacti con ESE número.
 
-   Al revés no puede ser: la numeración tiene que ser correlativa y sin
-   huecos, así que el número se reserva antes de salir a la red. La
-   consecuencia es que un envío fallido deja la fila creada, con su
-   número y marcada con el error, y se reintenta sobre ella. El número
-   no se «devuelve»: eso es lo correcto, no un descuido.
+   El número se reserva antes de salir a la red porque la numeración
+   tiene que ser correlativa y sin huecos. La consecuencia es que un
+   envío fallido deja la fila con su número reservado y su marca de
+   error, y se reintenta sobre ella. El número no se «devuelve»: eso es
+   lo correcto, no un descuido.
    ================================================================ */
 
 import { json, respuestaPreflight } from '../_shared/cors.ts'
@@ -149,7 +151,7 @@ Deno.serve(async (req) => {
   const COLUMNAS = `
     id, numero_factura, importe, fecha_emision, cita_id, paciente_id,
     concepto, base_imponible, tipo_igic, cuota_igic, tipo_irpf, cuota_irpf, total_factura,
-    verifactu_id, verifactu_estado, tipo_factura, factura_rectificada_id,
+    verifactu_id, verifactu_estado, emitida_at, tipo_factura, factura_rectificada_id,
     motivo_rectificacion,
     paciente:pacientes!facturas_paciente_id_fkey (id, nombre, dni, precio_sesion, tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio),
     cita:citas!facturas_cita_id_fkey (id, fecha_hora, tipo)
@@ -273,7 +275,9 @@ Deno.serve(async (req) => {
         tipo_factura: 'rectificativa',
         factura_rectificada_id: original.id,
         motivo_rectificacion: motivo,
-        // numero_factura lo pone el trigger, con serie «R»
+        // La rectificativa nace ya emitida: `emitida_at` es lo que hace
+        // que el trigger le asigne su número de la serie «R» (migración 0029).
+        emitida_at: new Date().toISOString(),
       })
       .select(COLUMNAS)
       .single()
@@ -383,6 +387,35 @@ Deno.serve(async (req) => {
       .update({ fecha_emision: hoy })
       .eq('id', factura.id)
     if (!error) factura.fecha_emision = hoy
+  }
+
+  /* ---------- 3 bis. Reservar el número ----------
+
+     El número se asigna al EMITIR (`emitida_at`, migración 0029), no al
+     crear la fila. Aquí es donde la factura se emite, así que se pone
+     `emitida_at` ANTES de salir a la red: el trigger le da su número y
+     así, si la AEAT falla, la fila queda con su número reservado y se
+     reintenta sobre ella (que es justo el comportamiento que ya se
+     documenta arriba).
+
+     Al subsanar / en una rectificativa la fila ya trae `emitida_at` y
+     número: el `where emitida_at is null` no la toca y el guard del
+     trigger conserva el número. */
+  if (!factura.emitida_at) {
+    const { data: reservada, error: errorReserva } = await db
+      .from('facturas')
+      .update({ emitida_at: new Date().toISOString() })
+      .eq('id', factura.id)
+      .is('emitida_at', null)
+      .select('numero_factura, emitida_at')
+      .single()
+
+    if (errorReserva || !reservada?.numero_factura) {
+      console.error('[Psicofactur] no se pudo reservar el número de factura:', errorReserva)
+      return json({ mensaje: 'No se ha podido preparar la factura para emitirla.' }, 500)
+    }
+    factura.numero_factura = reservada.numero_factura
+    factura.emitida_at = reservada.emitida_at
   }
 
   /* ---------- 4. A Verifacti ---------- */

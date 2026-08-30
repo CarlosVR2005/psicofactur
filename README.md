@@ -857,12 +857,21 @@ su histórico de citas y facturas.
 - **Las facturas no se borran**: se anulan (`estado_pago = 'cancelado'`) y
   dejan de sumar en los totales. La tabla no tiene política de DELETE, y así
   la numeración correlativa nunca pierde un número.
-- **Número de factura:** lo pone la base de datos, no el frontend. El trigger
-  `asignar_numero_factura()` lee un contador por psicóloga y año
-  (`contadores_factura`) y genera `2026/0001`, `2026/0002`… Se descartó
-  `CREATE SEQUENCE` porque es global (mezclaría psicólogas) y no se reinicia
-  cada 1 de enero. El índice único `facturas_numero_unico` es la red de
-  seguridad.
+- **Número de factura:** lo pone la base de datos, no el frontend, y **se
+  asigna al EMITIR, no al crear el borrador** (migración 0029). El trigger
+  `asignar_numero_factura()` corre en `before insert or update` y solo actúa
+  cuando `emitida_at` deja de ser null: lee un contador por psicóloga, año y
+  serie (`contadores_factura`) y genera `2026/0001`, `2026/0002`… (serie `R`
+  para las rectificativas). Así un borrador —los crea el cron para cada sesión
+  pasada— no gasta número, y la numeración queda correlativa, sin huecos y en
+  orden de expedición, como exige el RD 1619/2012. Un borrador muestra
+  «Borrador» en vez de número. Se descartó `CREATE SEQUENCE` porque es global
+  (mezclaría psicólogas) y no se reinicia cada 1 de enero; el índice único
+  `facturas_numero_unico` es la red de seguridad.
+  El **30-08-2026** se reseteó el contador de 2026 a 0 y se borraron 4 facturas
+  de prueba (única data que había: 2 en el entorno de pruebas de la AEAT, 1
+  correo a la propia dirección). No había ninguna factura legalmente emitida,
+  así que el reset no tocó ningún registro contable.
 - **Veri\*Factu: encendido o apagado** (`psicologas.verifactu_activo`, migración
   0028). **Apagado** (lo normal ahora): «Emitir» no llama a ninguna Edge
   Function ni a la AEAT — `emitirFacturaLocal` le pone la fecha de hoy y
