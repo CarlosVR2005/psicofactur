@@ -13,7 +13,7 @@ import { EsqueletoLista } from '../components/ui/Cargando'
 import FacturaFila from '../features/facturacion/FacturaFila'
 import FacturaManualModal from '../features/facturacion/FacturaManualModal'
 import { useFacturas } from '../hooks/useFacturas'
-import { facturarSesionesPendientes } from '../services/facturas'
+import { facturarSesionesPendientes, getMesesConFacturas } from '../services/facturas'
 import { getDatosFiscales, sincronizarEstadoFacturas } from '../services/verifacti'
 import { euros, normalizar } from '../lib/formato'
 import { aClave, hoy, MESES } from '../lib/fechas'
@@ -30,14 +30,38 @@ function etiquetaMes(clave) {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${ano}`
 }
 
+const MES_EN_CURSO = aClave(hoy()).slice(0, 7)
+
 export default function FacturacionPage() {
-  const { facturas, cargando, error, recargar, aplicarCambio } = useFacturas()
+  /* Por defecto sólo el mes en curso: así no se arrastran miles de
+     facturas en cada visita. Para ver otro mes se elige en el
+     desplegable; «Todos los meses» sí trae la lista entera. */
+  const [mesFiltro, setMesFiltro] = useState(MES_EN_CURSO)
+  const { facturas, cargando, error, recargar, aplicarCambio } = useFacturas(
+    null,
+    mesFiltro,
+  )
 
   const [filtro, setFiltro] = useState('todas')
-  const [mesFiltro, setMesFiltro] = useState('todos')
   const [busqueda, setBusqueda] = useState('')
   const [aviso, setAviso] = useState(null)
   const [modalManual, setModalManual] = useState(false)
+
+  /* Los meses del desplegable salen de una consulta ligera (sólo la
+     fecha), no de las facturas cargadas, que ahora son de un mes. */
+  const [mesesDisponibles, setMesesDisponibles] = useState([])
+  const [mesesCargados, setMesesCargados] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    getMesesConFacturas().then(({ data }) => {
+      if (!vivo) return
+      if (data) setMesesDisponibles(data)
+      setMesesCargados(true)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   /* ¿Veri*Factu encendido? (migración 0028). Apagado —lo normal ahora—,
      «Emitir» cierra la factura en local y no se sondea a Hacienda. */
@@ -52,9 +76,8 @@ export default function FacturacionPage() {
     }
   }, [])
 
-  const mesEnCurso = aClave(hoy()).slice(0, 7)
-  // Con filtro de mes puesto, el resumen es de ese mes; si no, del actual
-  const mesResumen = mesFiltro === 'todos' ? mesEnCurso : mesFiltro
+  // Con un mes elegido, el resumen es de ese mes; en «Todos», del actual
+  const mesResumen = mesFiltro === 'todos' ? MES_EN_CURSO : mesFiltro
 
   /* Facturar «todo» ya no es un botón: el cron `facturar_citas_pasadas`
      crea la fila borrador de cada sesión celebrada. Al abrir la pantalla
@@ -148,11 +171,14 @@ export default function FacturacionPage() {
     return { total, cobrado, pendiente: total - cobrado, numero: delMes.length }
   }, [facturas, mesResumen])
 
-  // Los meses (de sesión) que tienen alguna factura, para el desplegable
+  // Opciones del desplegable: los meses con factura + el que esté
+  // elegido (por si la consulta ligera aún no ha llegado).
   const mesesConFactura = useMemo(() => {
-    const claves = new Set(facturas.map((f) => f.mesSesion))
+    const claves = new Set(mesesDisponibles)
+    if (mesFiltro !== 'todos') claves.add(mesFiltro)
+    claves.add(MES_EN_CURSO)
     return [...claves].sort((a, b) => b.localeCompare(a))
-  }, [facturas])
+  }, [mesesDisponibles, mesFiltro])
 
   const filtradas = useMemo(() => {
     const q = normalizar(busqueda.trim())
@@ -243,22 +269,42 @@ export default function FacturacionPage() {
 
       <AvisoError error={error} alReintentar={recargar} className="mb-4" />
 
+      {busqueda && mesFiltro !== 'todos' && (
+        <p className="mb-3 text-sm text-tinta-suave">
+          Buscando sólo en {etiquetaMes(mesFiltro).toLowerCase()}.{' '}
+          <button
+            type="button"
+            onClick={() => setMesFiltro('todos')}
+            className="font-medium text-marca-600 underline underline-offset-2"
+          >
+            Buscar en todos los meses
+          </button>
+        </p>
+      )}
+
       {cargando ? (
         <EsqueletoLista filas={5} />
       ) : porMes.length === 0 ? (
-        <EstadoVacio
-          icono={ReceiptText}
-          titulo={
-            facturas.length === 0
-              ? 'Todavía no hay facturas'
-              : 'No hay facturas que mostrar'
-          }
-          texto={
-            facturas.length === 0
-              ? 'Cada sesión genera su factura en cuanto pasa su hora.'
-              : 'Prueba a cambiar el filtro, el mes o el texto de búsqueda.'
-          }
-        />
+        mesesCargados && mesesDisponibles.length === 0 ? (
+          <EstadoVacio
+            icono={ReceiptText}
+            titulo="Todavía no hay facturas"
+            texto="Cada sesión genera su factura en cuanto pasa su hora."
+          />
+        ) : (
+          <EstadoVacio
+            icono={ReceiptText}
+            titulo="No hay facturas que mostrar"
+            texto="No hay ninguna en este mes con ese filtro o esa búsqueda."
+            accion={
+              mesFiltro !== 'todos' && (
+                <Boton variante="secundario" onClick={() => setMesFiltro('todos')}>
+                  Ver todos los meses
+                </Boton>
+              )
+            }
+          />
+        )
       ) : (
         <div className="space-y-6">
           {porMes.map(([mes, lista]) => {

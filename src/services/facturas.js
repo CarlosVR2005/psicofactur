@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { ejecutar, exito, fallo, psicologaActualId } from './base'
-import { aClave, hoy } from '../lib/fechas'
+import { aClave, hoy, sumarDias } from '../lib/fechas'
 
 /* ================================================================
    FACTURAS — tabla `facturas`
@@ -146,24 +146,72 @@ function deFila(fila) {
    emisión, «desaparecía» de la pantalla un mes entero de golpe. */
 const TAMANO_PAGINA = 1000
 
-/** Todas las facturas, de la más reciente a la más antigua */
-export async function getFacturas() {
+/**
+ * Facturas de la más reciente a la más antigua.
+ *
+ * @param {{ mes?: string }} opciones  `mes` = 'YYYY-MM' para traer sólo
+ *   ese mes; sin él (o 'todos') vienen todas. La pantalla de facturación
+ *   carga un mes cada vez para no arrastrar miles de filas en cada
+ *   visita; «Todos los meses» es el que pide la lista entera.
+ */
+export async function getFacturas({ mes } = {}) {
+  /* La ventana se filtra por FECHA DE EMISIÓN, pero la pantalla agrupa
+     por mes de la SESIÓN. Casi siempre coinciden (el borrador nace el
+     mismo día o al siguiente), pero una sesión de fin de mes puede
+     facturarse ya entrado el mes siguiente. Se ensancha una semana por
+     cada lado y el filtro fino por `mesSesion` lo hace luego la pantalla. */
+  let rango = null
+  if (mes && mes !== 'todos') {
+    const [anio, m] = mes.split('-').map(Number)
+    rango = {
+      desde: aClave(sumarDias(new Date(anio, m - 1, 1), -7)),
+      hasta: aClave(sumarDias(new Date(anio, m, 1), 7)),
+    }
+  }
+
   const filas = []
   for (let desde = 0; ; desde += TAMANO_PAGINA) {
-    const { data, error } = await ejecutar(
-      supabase
-        .from('facturas')
-        .select(COLUMNAS)
-        .order('fecha_emision', { ascending: false })
-        .order('numero_factura', { ascending: false })
-        .range(desde, desde + TAMANO_PAGINA - 1),
-      'cargar las facturas',
-    )
+    let consulta = supabase
+      .from('facturas')
+      .select(COLUMNAS)
+      .order('fecha_emision', { ascending: false })
+      .order('numero_factura', { ascending: false })
+      .range(desde, desde + TAMANO_PAGINA - 1)
+    if (rango) {
+      consulta = consulta
+        .gte('fecha_emision', rango.desde)
+        .lt('fecha_emision', rango.hasta)
+    }
+
+    const { data, error } = await ejecutar(consulta, 'cargar las facturas')
     if (error) return { data: null, error }
     filas.push(...data)
     if (data.length < TAMANO_PAGINA) break
   }
   return exito(filas.map(deFila))
+}
+
+/**
+ * Los meses ('YYYY-MM') que tienen alguna factura, de reciente a antiguo.
+ * Sólo trae la columna de fecha, sin joins: alimenta el desplegable de
+ * meses de la pantalla de facturación sin cargar las facturas enteras.
+ */
+export async function getMesesConFacturas() {
+  const meses = new Set()
+  for (let desde = 0; ; desde += TAMANO_PAGINA) {
+    const { data, error } = await ejecutar(
+      supabase
+        .from('facturas')
+        .select('fecha_emision')
+        .order('fecha_emision', { ascending: false })
+        .range(desde, desde + TAMANO_PAGINA - 1),
+      'cargar los meses con facturas',
+    )
+    if (error) return { data: null, error }
+    for (const f of data) meses.add(String(f.fecha_emision).slice(0, 7))
+    if (data.length < TAMANO_PAGINA) break
+  }
+  return exito([...meses].sort((a, b) => b.localeCompare(a)))
 }
 
 export async function getFacturasDePaciente(pacienteId) {
