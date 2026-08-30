@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Archive,
   ArchiveRestore,
@@ -24,12 +24,14 @@ import Boton from '../components/ui/Boton'
 import Avatar from '../components/ui/Avatar'
 import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
+import Segmentado from '../components/ui/Segmentado'
 import Cargando from '../components/ui/Cargando'
 import AvisoError from '../components/ui/AvisoError'
 import DatoFicha from '../features/pacientes/DatoFicha'
 import PacienteModal from '../features/pacientes/PacienteModal'
 import EliminarPacienteModal from '../features/pacientes/EliminarPacienteModal'
 import ConsentimientoCard from '../features/pacientes/ConsentimientoCard'
+import HistoriaClinica from '../features/pacientes/HistoriaClinica'
 import CitaModal from '../features/agenda/CitaModal'
 import TipoCitaBadge from '../features/agenda/TipoCitaBadge'
 import EstadoPagoBadge from '../features/facturacion/EstadoPagoBadge'
@@ -47,6 +49,18 @@ export default function PacienteDetallePage() {
   const { paciente, cargando, error, recargar, setPaciente } = usePaciente(id)
   const { citas, recargar: recargarCitas } = useCitasDePaciente(id)
   const { facturas } = useFacturas(id)
+
+  const [params, setParams] = useSearchParams()
+  const pestana = params.get('pestana') === 'historia' ? 'historia' : 'ficha'
+  const cambiarPestana = (clave) =>
+    setParams(
+      (p) => {
+        if (clave === 'historia') p.set('pestana', 'historia')
+        else p.delete('pestana')
+        return p
+      },
+      { replace: true },
+    )
 
   const [editando, setEditando] = useState(false)
   const [nuevaCita, setNuevaCita] = useState(false)
@@ -157,6 +171,23 @@ export default function PacienteDetallePage() {
         </div>
       </Card>
 
+      <div className="mt-4">
+        <Segmentado
+          opciones={[
+            { id: 'ficha', etiqueta: 'Ficha' },
+            { id: 'historia', etiqueta: 'Historia clínica' },
+          ]}
+          valor={pestana}
+          alCambiar={cambiarPestana}
+        />
+      </div>
+
+      {pestana === 'historia' ? (
+        <div className="mt-4">
+          <HistoriaClinica paciente={paciente} />
+        </div>
+      ) : (
+       <>
       {/* Datos de contacto y económicos */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
        <div className="space-y-4">
@@ -428,6 +459,8 @@ export default function PacienteDetallePage() {
           </Card>
         </div>
       </div>
+       </>
+      )}
 
       <PacienteModal
         abierto={editando}

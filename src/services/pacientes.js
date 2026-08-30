@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { ejecutar, exito, fallo, psicologaActualId } from './base'
 import { normalizarNif } from '../lib/nif'
+import { borrarAdjuntosEnStorage, rutasAdjuntosDePaciente } from './historia'
 
 /* ================================================================
    PACIENTES — tabla `pacientes`
@@ -197,6 +198,12 @@ export async function historialDePaciente(id) {
  * @returns {Promise<{data: { citas: number }|null, error: object|null}>}
  */
 export async function eliminarPaciente(id) {
+  /* Las rutas de Storage de la historia clínica hay que leerlas ANTES:
+     la cascada de Postgres borra las filas de `historia_adjuntos`, pero
+     los ficheros del bucket se quedan y sin la fila ya no hay forma de
+     saber cuáles eran. */
+  const { data: rutas } = await rutasAdjuntosDePaciente(id)
+
   const { data, error } = await ejecutar(
     supabase.rpc('eliminar_paciente', { p_id: id }),
     'eliminar el paciente',
@@ -221,6 +228,11 @@ export async function eliminarPaciente(id) {
       'No se ha encontrado ese paciente. Puede que ya se haya borrado.',
     )
   }
+
+  /* La ficha ya no existe. Ahora sí se limpian sus documentos del
+     bucket. Un fallo aquí no revierte el borrado ni se enseña: la
+     `borrarAdjuntosEnStorage` ya deja el detalle en la consola. */
+  if (rutas?.length) await borrarAdjuntosEnStorage(rutas)
 
   return exito({ citas: data.citas ?? 0 })
 }

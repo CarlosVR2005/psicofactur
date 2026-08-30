@@ -28,6 +28,15 @@ export function iniciales(nombre) {
     .toUpperCase()
 }
 
+/** 1536000 -> '1,5 MB' · 4096 -> '4 KB'. Para el tamaño de los adjuntos. */
+export function tamanoArchivo(bytes) {
+  const n = Number(bytes)
+  if (!n || n < 0) return ''
+  const kb = n / 1024
+  if (kb < 1024) return `${Math.max(1, Math.round(kb))} KB`
+  return `${(kb / 1024).toFixed(1).replace('.', ',')} MB`
+}
+
 /** Quita tildes y pasa a minúsculas, para buscar sin preocuparse de acentos */
 export function normalizar(texto) {
   return String(texto)
