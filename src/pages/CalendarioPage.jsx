@@ -135,6 +135,23 @@ export default function CalendarioPage() {
         : `${fechaCorta(dias[0])} – ${fechaCorta(dias[6])}`
       : mesYAno(referencia)
 
+  /* Recuento de lo que se está mirando, para el subtítulo. En mes se
+     dejan fuera los días de relleno de la cuadrícula que son de otro mes. */
+  const resumenVista = useMemo(() => {
+    const mesRef = aClave(referencia).slice(0, 7)
+    let total = 0
+    let sinConfirmar = 0
+    for (const [clave, lista] of citasPorDia) {
+      if (vista === 'mes' && clave.slice(0, 7) !== mesRef) continue
+      for (const c of lista) {
+        if (c.confirmacion === 'cancelada') continue
+        total += 1
+        if (c.confirmacion === 'pendiente') sinConfirmar += 1
+      }
+    }
+    return { total, sinConfirmar }
+  }, [citasPorDia, vista, referencia])
+
   // Las canceladas se quedan a la vista (tachadas) para poder reprogramarlas
   const citasDelDiaElegido = citasPorDia.get(diaElegido) ?? []
 
@@ -142,7 +159,14 @@ export default function CalendarioPage() {
     <>
       <Cabecera
         titulo="Calendario"
-        subtitulo="Tu agenda de la consulta"
+        subtitulo={
+          cargando
+            ? 'Cargando…'
+            : `${resumenVista.total} ${resumenVista.total === 1 ? 'cita' : 'citas'}` +
+              (resumenVista.sinConfirmar
+                ? ` · ${resumenVista.sinConfirmar} sin confirmar`
+                : '')
+        }
         accion={
           <Boton icono={CalendarPlus} onClick={() => abrirNueva()}>
             Nueva cita
@@ -150,27 +174,32 @@ export default function CalendarioPage() {
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={retroceder}
-              aria-label="Anterior"
-              className="rounded-xl border border-borde bg-white p-2.5 text-tinta-suave transition-colors hover:bg-crema hover:text-tinta"
-            >
-              <ChevronLeft className="size-5" />
-            </button>
-            <button
-              onClick={avanzar}
-              aria-label="Siguiente"
-              className="rounded-xl border border-borde bg-white p-2.5 text-tinta-suave transition-colors hover:bg-crema hover:text-tinta"
-            >
-              <ChevronRight className="size-5" />
-            </button>
-            <p className="ml-2 text-lg font-semibold text-tinta first-letter:uppercase">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center rounded-xl border border-borde bg-white text-tinta-suave">
+              <button
+                onClick={retroceder}
+                aria-label="Anterior"
+                className="rounded-l-xl p-2.5 transition-colors hover:bg-crema hover:text-tinta"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                onClick={irAHoy}
+                className="border-x border-borde px-3 py-2 text-sm font-medium transition-colors hover:bg-crema hover:text-tinta"
+              >
+                Hoy
+              </button>
+              <button
+                onClick={avanzar}
+                aria-label="Siguiente"
+                className="rounded-r-xl p-2.5 transition-colors hover:bg-crema hover:text-tinta"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+            <p className="text-lg font-semibold text-tinta first-letter:uppercase">
               {titulo}
             </p>
-            <Boton variante="fantasma" tamano="sm" className="ml-1" onClick={irAHoy}>
-              Hoy
-            </Boton>
           </div>
 
           <Segmentado opciones={VISTAS} valor={vista} alCambiar={setVista} />
