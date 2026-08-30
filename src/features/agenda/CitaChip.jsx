@@ -2,13 +2,11 @@ import { CalendarCheck2, Check, Video } from 'lucide-react'
 import { TIPOS_CITA } from '../../lib/tipos'
 import { sumarMinutos } from '../../lib/fechas'
 
-/* Una cita dentro del calendario. Barra de color a la izquierda = tipo.
-   El fondo y la etiqueta de la derecha = confirmación del paciente, para
-   ver de un vistazo quién viene sin abrir cada ficha:
-     verde  → confirmada
-     ámbar  → aún sin respuesta
-     tachada y gris → cancelada
-   Pensado para pulsarse con el dedo: toda la tarjeta es el botón. */
+/* Una cita dentro del calendario. Barra de color a la izquierda = tipo
+   de sesión. La confirmación del paciente se marca sólo cuando pide
+   algo: ámbar en las que faltan por confirmar, apagada y tachada en las
+   canceladas. Las confirmadas van en blanco, con un check discreto: son
+   las que no hay que mirar. Toda la tarjeta es el botón. */
 export default function CitaChip({ cita, alPulsar, compacto = false }) {
   const tipo = TIPOS_CITA[cita.tipo]
   const cancelada = cita.confirmacion === 'cancelada'
@@ -21,17 +19,15 @@ export default function CitaChip({ cita, alPulsar, compacto = false }) {
     : cita.pacienteNombre
 
   const fondo = cancelada
-    ? 'border-borde bg-white opacity-55'
-    : confirmada
-      ? 'border-verde/30 bg-verde-suave/40'
-      : pendiente
-        ? 'border-ambar/30 bg-ambar-suave/40'
-        : 'border-borde bg-white'
+    ? 'border-borde bg-white opacity-60'
+    : pendiente
+      ? 'border-ambar/30 bg-ambar-suave/40'
+      : 'border-borde bg-white'
 
   return (
     <button
       onClick={() => alPulsar?.(cita)}
-      className={`group flex w-full items-stretch gap-2.5 overflow-hidden rounded-xl border text-left shadow-suave transition-colors hover:border-marca-200 hover:bg-marca-50/40 ${fondo}`}
+      className={`group flex w-full items-stretch gap-2.5 overflow-hidden rounded-xl border text-left transition-colors hover:border-marca-200 hover:bg-marca-50/40 ${fondo}`}
     >
       <span className={`w-1.5 shrink-0 ${tipo.barra}`} aria-hidden="true" />
       <span className={`min-w-0 flex-1 py-2 pr-2.5 ${compacto ? '' : 'sm:py-2.5'}`}>
@@ -65,13 +61,11 @@ export default function CitaChip({ cita, alPulsar, compacto = false }) {
           </span>
 
           {confirmada && (
-            <span
-              className="flex shrink-0 items-center gap-1 text-xs font-medium text-verde"
-              title="El paciente ha confirmado"
-            >
-              <Check className="size-3.5" strokeWidth={2.8} />
-              {!compacto && 'Confirmada'}
-            </span>
+            <Check
+              className="size-3.5 shrink-0 text-verde"
+              strokeWidth={2.8}
+              aria-label="El paciente ha confirmado"
+            />
           )}
           {pendiente && (
             <span
