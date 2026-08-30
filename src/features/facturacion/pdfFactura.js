@@ -398,24 +398,40 @@ export function nombreFicheroFactura(factura) {
   return `Factura ${String(factura.numero).replace(/\//g, '-')}.pdf`
 }
 
+/* En un móvil o una tablet, «compartir» ES la forma de hacerle llegar
+   la factura al paciente (WhatsApp, correo, Archivos…). En un ordenador
+   no: ahí «Descargar» tiene que descargar, y abrir el diálogo de
+   compartir de Windows en vez del de «guardar como» sólo estorba. Se
+   distingue por el puntero: `coarse` sin `fine` = pantalla táctil sin
+   ratón. */
+function esTactilSinRaton() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return (
+    window.matchMedia('(pointer: coarse)').matches &&
+    !window.matchMedia('(pointer: fine)').matches
+  )
+}
+
 /**
- * Genera el PDF y lo entrega. En el móvil abre el menú de compartir del
- * sistema si está disponible —que es como se le manda de verdad a un
- * paciente— y si no, lo descarga.
+ * Genera el PDF y lo entrega. En el ordenador lo descarga (sale el
+ * diálogo de guardar del navegador). En el móvil, si el sistema deja,
+ * abre el menú de compartir —que es como se le manda a un paciente— y
+ * si no, también lo descarga.
  */
 export async function descargarFacturaPDF({ factura, emisor, destinatario }) {
   const doc = await construirFacturaPDF({ factura, emisor, destinatario })
   const nombre = nombreFicheroFactura(factura)
-  const blob = doc.output('blob')
-  const fichero = new File([blob], nombre, { type: 'application/pdf' })
 
-  if (navigator.canShare?.({ files: [fichero] })) {
-    try {
-      await navigator.share({ files: [fichero], title: nombre })
-      return
-    } catch (e) {
-      // Si cancela el menú de compartir no se descarga nada a la fuerza
-      if (e?.name === 'AbortError') return
+  if (esTactilSinRaton()) {
+    const fichero = new File([doc.output('blob')], nombre, { type: 'application/pdf' })
+    if (navigator.canShare?.({ files: [fichero] })) {
+      try {
+        await navigator.share({ files: [fichero], title: nombre })
+        return
+      } catch (e) {
+        // Si cancela el menú de compartir no se descarga nada a la fuerza
+        if (e?.name === 'AbortError') return
+      }
     }
   }
 
