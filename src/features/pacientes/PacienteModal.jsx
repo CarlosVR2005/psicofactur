@@ -20,7 +20,7 @@ const VACIO = {
   telefono: '',
   correo: '',
   fechaNacimiento: '',
-  precioSesion: 60,
+  precioSesion: 70,
   inicioTerapia: aClave(hoy()),
   observaciones: '',
   tipoCliente: 'particular',
