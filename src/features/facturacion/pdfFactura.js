@@ -96,6 +96,15 @@ function euros(n) {
   return `${Number(n ?? 0).toFixed(2).replace('.', ',')} €`
 }
 
+/** 'ES9121000418450200051332' -> 'ES91 2100 0418 4502 0005 1332' */
+function ibanAgrupado(iban) {
+  return String(iban ?? '')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+    .replace(/(.{4})/g, '$1 ')
+    .trim()
+}
+
 function fechaLarga(iso) {
   if (!iso) return ''
   const [ano, mes, dia] = String(iso).slice(0, 10).split('-')
@@ -319,7 +328,11 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
   fila('TOTAL FACTURA', euros(factura.total), true)
 
   if (irpf > 0) {
-    fila(`Retención IRPF ${irpf}%`, `− ${euros(factura.cuotaIrpf)}`)
+    // Guion normal (ASCII), no el signo menos «−» (U+2212): las fuentes
+    // base de jsPDF no lo llevan y, al colarse un carácter que no está
+    // en su tabla, el visor reparte espacios entre TODAS las cifras y
+    // sale «1 5 0, 0 0 €».
+    fila(`Retención IRPF ${irpf}%`, `- ${euros(factura.cuotaIrpf)}`)
     fila('LÍQUIDO A PERCIBIR', euros(factura.liquido), true)
   }
 
@@ -354,6 +367,27 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
       y += 4.2
     })
     doc.setTextColor(0)
+  }
+
+  /* ---------- Forma de pago ----------
+     El IBAN de la consulta, para que el paciente o la empresa sepan a
+     dónde transferir. Es opcional: si no está puesto en Ajustes, no
+     aparece este bloque. No se le manda a la AEAT. */
+  if (emisor?.iban) {
+    y += 6
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(120)
+    doc.text('FORMA DE PAGO', MARGEN, y)
+    y += 5
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.text('Transferencia bancaria', MARGEN, y)
+    y += 4.6
+    doc.text(`IBAN: ${ibanAgrupado(emisor.iban)}`, MARGEN, y)
+    y += 4.6
   }
 
   return doc
