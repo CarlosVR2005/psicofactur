@@ -17,9 +17,9 @@ export const TIPOS_CITA = {
     descripcionFactura: 'Sesión de psicoterapia individual',
     etiqueta: 'Individual',
     duracion: 55,
-    punto: 'bg-marca-500',
-    chip: 'bg-marca-50 text-marca-700 border-marca-200',
-    barra: 'bg-marca-500',
+    punto: 'bg-sesion-ind',
+    chip: 'bg-sesion-ind-suave text-sesion-ind border-sesion-ind/25',
+    barra: 'bg-sesion-ind',
   },
   pareja: {
     id: 'pareja',
@@ -29,9 +29,9 @@ export const TIPOS_CITA = {
     descripcionFactura: 'Sesión de terapia de pareja',
     etiqueta: 'Pareja',
     duracion: 75,
-    punto: 'bg-malva',
-    chip: 'bg-malva-suave text-malva border-malva/25',
-    barra: 'bg-malva',
+    punto: 'bg-sesion-par',
+    chip: 'bg-sesion-par-suave text-sesion-par border-sesion-par/25',
+    barra: 'bg-sesion-par',
   },
   online: {
     id: 'online',
@@ -41,9 +41,9 @@ export const TIPOS_CITA = {
     descripcionFactura: 'Sesión de psicoterapia online',
     etiqueta: 'Online',
     duracion: 55,
-    punto: 'bg-azul',
-    chip: 'bg-azul-suave text-azul border-azul/25',
-    barra: 'bg-azul',
+    punto: 'bg-sesion-onl',
+    chip: 'bg-sesion-onl-suave text-sesion-onl border-sesion-onl/25',
+    barra: 'bg-sesion-onl',
   },
 }
 

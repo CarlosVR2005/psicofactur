@@ -3,10 +3,12 @@ import { TIPOS_CITA } from '../../lib/tipos'
 import { sumarMinutos } from '../../lib/fechas'
 
 /* Una cita dentro del calendario. Barra de color a la izquierda = tipo
-   de sesión. La confirmación del paciente se marca sólo cuando pide
-   algo: ámbar en las que faltan por confirmar, apagada y tachada en las
-   canceladas. Las confirmadas van en blanco, con un check discreto: son
-   las que no hay que mirar. Toda la tarjeta es el botón. */
+   de sesión (verde individual, violeta pareja, azul online). El fondo =
+   confirmación del paciente:
+     verde  → confirmada
+     ámbar  → aún sin respuesta
+     tachada y apagada → cancelada
+   Toda la tarjeta es el botón. */
 export default function CitaChip({ cita, alPulsar, compacto = false }) {
   const tipo = TIPOS_CITA[cita.tipo]
   const cancelada = cita.confirmacion === 'cancelada'
@@ -20,9 +22,11 @@ export default function CitaChip({ cita, alPulsar, compacto = false }) {
 
   const fondo = cancelada
     ? 'border-borde bg-white opacity-60'
-    : pendiente
-      ? 'border-ambar/30 bg-ambar-suave/40'
-      : 'border-borde bg-white'
+    : confirmada
+      ? 'border-verde/30 bg-verde-suave/40'
+      : pendiente
+        ? 'border-ambar/30 bg-ambar-suave/40'
+        : 'border-borde bg-white'
 
   return (
     <button

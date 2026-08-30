@@ -10,6 +10,9 @@ const TONOS = {
   rojo: 'bg-rojo-suave text-rojo border-rojo/25',
   malva: 'bg-malva-suave text-malva border-malva/25',
   azul: 'bg-azul-suave text-azul border-azul/25',
+  sesionInd: 'bg-sesion-ind-suave text-sesion-ind border-sesion-ind/25',
+  sesionPar: 'bg-sesion-par-suave text-sesion-par border-sesion-par/25',
+  sesionOnl: 'bg-sesion-onl-suave text-sesion-onl border-sesion-onl/25',
 }
 
 const PUNTOS = {
@@ -20,6 +23,9 @@ const PUNTOS = {
   rojo: 'bg-rojo',
   malva: 'bg-malva',
   azul: 'bg-azul',
+  sesionInd: 'bg-sesion-ind',
+  sesionPar: 'bg-sesion-par',
+  sesionOnl: 'bg-sesion-onl',
 }
 
 const TAMANOS = {

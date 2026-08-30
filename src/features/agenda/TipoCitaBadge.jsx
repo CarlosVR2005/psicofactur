@@ -4,9 +4,9 @@ import { TIPOS_CITA } from '../../lib/tipos'
 /* Individual · Pareja · Online — cada uno con su color, siempre el mismo
    en la agenda, en la ficha del paciente y en el panel de recordatorios. */
 const TONO = {
-  individual: 'marca',
-  pareja: 'malva',
-  online: 'azul',
+  individual: 'sesionInd',
+  pareja: 'sesionPar',
+  online: 'sesionOnl',
 }
 
 export default function TipoCitaBadge({ tipo, tamano = 'sm' }) {
