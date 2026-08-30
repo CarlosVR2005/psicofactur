@@ -57,6 +57,8 @@ interface ConfigVerifactu {
   tipoImpositivo?: number | null
   /** En pruebas se pone a false para poder usar DNIs inventados */
   validarDestinatario?: boolean
+  /** Consulta en Canarias: las exentas se declaran exentas de IGIC (impuesto 03). */
+  regimenCanarias?: boolean
 }
 
 Deno.serve(async (req) => {
@@ -140,17 +142,16 @@ Deno.serve(async (req) => {
   }
 
   const config: ConfigVerifactu = (psicologa.verifactu_config ?? {}) as ConfigVerifactu
-  // Por defecto exenta por artículo 20: las sesiones de psicoterapia de
-  // una psicóloga sanitaria son asistencia sanitaria y no llevan IVA.
-  const exencion = config.exencion === undefined ? 'E1' : config.exencion
+  const regimenCanarias = config.regimenCanarias === true
 
   /* ---------- 2. La fila de la factura ---------- */
 
   const COLUMNAS = `
     id, numero_factura, importe, fecha_emision, cita_id, paciente_id,
+    concepto, base_imponible, tipo_igic, cuota_igic, tipo_irpf, cuota_irpf, total_factura,
     verifactu_id, verifactu_estado, tipo_factura, factura_rectificada_id,
     motivo_rectificacion,
-    paciente:pacientes!facturas_paciente_id_fkey (id, nombre, dni, precio_sesion),
+    paciente:pacientes!facturas_paciente_id_fkey (id, nombre, dni, precio_sesion, tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio),
     cita:citas!facturas_cita_id_fkey (id, fecha_hora, tipo)
   `
 
@@ -302,7 +303,7 @@ Deno.serve(async (req) => {
   if (!original && factura.tipo_factura === 'rectificativa' && factura.factura_rectificada_id) {
     const { data, error } = await db
       .from('facturas')
-      .select('id, numero_factura, importe, fecha_emision')
+      .select('id, numero_factura, importe, fecha_emision, base_imponible, tipo_igic, cuota_igic, total_factura')
       .eq('id', factura.factura_rectificada_id)
       .single()
 
@@ -336,7 +337,11 @@ Deno.serve(async (req) => {
      `precio_sesion` a 0 hasta que se les pone precio a mano, y sin este
      corte se registraría en Hacienda un alta de 0,00 € que después hay
      que rectificar. Se avisa señalando dónde se arregla. */
-  if (!(Number(factura.importe) > 0)) {
+  /* total_factura = base + IGIC. Es lo que se registra en la AEAT (el
+     IRPF no cuenta aquí). En las de sesión sin desglose coincide con
+     `importe`. */
+  const totalFactura = Number(factura.total_factura ?? factura.importe ?? 0)
+  if (!(totalFactura > 0)) {
     return json(
       {
         mensaje: `${factura.paciente?.nombre ?? 'Este paciente'} no tiene precio por sesión, así que la factura saldría de 0 €. Ponle el precio en su ficha y vuelve a intentarlo.`,
@@ -387,38 +392,66 @@ Deno.serve(async (req) => {
     ? sesion.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
     : null
 
+  /* La descripción: si la factura es manual (un taller, una formación)
+     lleva su propio concepto; si sale de una cita se compone del tipo. */
+  const conceptoManual = String(factura.concepto ?? '').trim()
   const etiqueta = ETIQUETA_TIPO[factura.cita?.tipo] ?? 'Sesión de psicoterapia'
-  const descripcion = fechaSesion
-    ? `${etiqueta} del ${fechaSesion.split('-').reverse().join('/')}`
-    : etiqueta
+  const descripcion =
+    conceptoManual ||
+    (fechaSesion ? `${etiqueta} del ${fechaSesion.split('-').reverse().join('/')}` : etiqueta)
+
+  /* IGIC o exención. Si la factura lleva un tipo de IGIC (> 0) es una
+     operación sujeta y NO exenta; si no, va exenta por asistencia
+     sanitaria (art. 20 LIVA / su equivalente en IGIC en Canarias). */
+  const tipoIgic = Number(factura.tipo_igic ?? 0)
+  const exencion =
+    tipoIgic > 0 ? null : config.exencion === undefined ? 'E1' : config.exencion
+
+  /* El destinatario: para una ficha de empresa, la empresa (CIF); para
+     un particular, la persona (DNI). */
+  const esEmpresa = factura.paciente?.tipo_cliente === 'empresa'
+  const destinatario = esEmpresa
+    ? {
+        nif: factura.paciente?.empresa_cif ?? null,
+        nombre: factura.paciente?.empresa_razon_social ?? null,
+      }
+    : {
+        nif: factura.paciente?.dni ?? null,
+        nombre: factura.paciente?.nombre ?? null,
+      }
 
   const datos: DatosFactura = {
     numeroFactura: factura.numero_factura,
     fechaEmision: factura.fecha_emision,
-    fechaOperacion: fechaSesion,
+    // Sin cita (factura manual) no hay fecha de operación distinta
+    fechaOperacion: conceptoManual ? null : fechaSesion,
     descripcion,
-    importe: Number(factura.importe ?? 0),
-    destinatario: {
-      nif: factura.paciente?.dni ?? null,
-      nombre: factura.paciente?.nombre ?? null,
-    },
+    importe: totalFactura, // base + IGIC; el IRPF no viaja a la AEAT
+    base: factura.base_imponible != null ? Number(factura.base_imponible) : null,
+    tipoIgic,
+    cuotaIgic: Number(factura.cuota_igic ?? 0),
+    regimenCanarias,
+    destinatario,
     exencion,
     tipoImpositivo: config.tipoImpositivo ?? null,
     validarDestinatario: config.validarDestinatario,
   }
 
   /* Lo que hace falta para que la AEAT sepa a qué factura sustituye
-     ésta. El tipo de exención se toma de la configuración actual: si
-     algún día cambiara, la base de la original se descompondría con el
-     criterio de hoy y no con el de entonces. */
+     ésta. El desglose se toma de la propia original (base/IGIC), no se
+     recompone con el criterio de hoy. */
   const rectifica = original
     ? {
         original: {
           numeroFactura: original.numero_factura,
           fechaEmision: original.fecha_emision,
-          importe: Number(original.importe ?? 0),
-          exencion,
+          importe: Number(original.total_factura ?? original.importe ?? 0),
+          base: original.base_imponible != null ? Number(original.base_imponible) : null,
+          exencion: Number(original.tipo_igic ?? 0) > 0 ? null : exencion,
           tipoImpositivo: config.tipoImpositivo ?? null,
+          tipoIgic: Number(original.tipo_igic ?? 0),
+          cuotaIgic: Number(original.cuota_igic ?? 0),
+          regimenCanarias,
         },
         motivo: String(factura.motivo_rectificacion ?? 'Rectificación de factura'),
       }
@@ -449,6 +482,13 @@ Deno.serve(async (req) => {
         verifactu_estado: respuesta.estado ?? 'Pendiente',
         verifactu_error: null,
         verifactu_enviada_at: new Date().toISOString(),
+        // Copia del destinatario tal como estaba al emitir: si luego
+        // cambian los datos de la empresa, esta factura no debe moverse.
+        destinatario_nif: destinatario.nif ?? null,
+        destinatario_nombre: destinatario.nombre ?? null,
+        destinatario_domicilio: esEmpresa
+          ? factura.paciente?.empresa_domicilio ?? null
+          : null,
         ...(metodoPago ? { metodo_pago: metodoPago, estado_pago: 'pagado' } : {}),
       })
       .eq('id', factura.id)

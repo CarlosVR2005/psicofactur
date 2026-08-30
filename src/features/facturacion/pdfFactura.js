@@ -52,6 +52,14 @@ const MENCION_EXENCION = {
   E6: 'Operación exenta de IVA según la Ley 37/1992.',
 }
 
+/* En Canarias la exención sanitaria es del IGIC, no del IVA. El
+   precepto exacto lo tiene que confirmar el gestor de la consulta; se
+   nombra la ley. */
+const MENCION_EXENCION_IGIC = {
+  E1: 'Operación exenta de IGIC (asistencia sanitaria) conforme a la Ley 20/1991, de 7 de junio, de modificación de los aspectos fiscales del Régimen Económico Fiscal de Canarias.',
+  DEFECTO: 'Operación exenta de IGIC conforme a la Ley 20/1991, de 7 de junio.',
+}
+
 /* El hueco del logo. El QR mide 35 mm centrado en una página de 210,
    así que empieza en x = 87,5. Con el margen de 20, quedan 67,5 mm
    hasta él; nos quedamos en 50 para dejar un pasillo visible. */
@@ -233,7 +241,11 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
   const finDestinatario = destinatario?.nombre
     ? bloque(
         'Destinatario',
-        [destinatario.nombre, destinatario.dni ? `NIF: ${destinatario.dni}` : null],
+        [
+          destinatario.nombre,
+          destinatario.dni ? `NIF: ${destinatario.dni}` : null,
+          destinatario.domicilio || null,
+        ],
         MARGEN + ANCHO_UTIL / 2 + 4,
       )
     : yBloques
@@ -260,7 +272,9 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
   concepto.forEach((trozo, i) => {
     doc.text(trozo, MARGEN, y + i * 4.6)
   })
-  doc.text(euros(factura.importe), ANCHO_PAGINA - MARGEN, y, { align: 'right' })
+  // En la línea del concepto va el TOTAL de la factura (base + IGIC); la
+  // retención de IRPF se descuenta más abajo.
+  doc.text(euros(factura.total), ANCHO_PAGINA - MARGEN, y, { align: 'right' })
   y += Math.max(concepto.length * 4.6, 4.6) + 4
 
   /* A qué factura sustituye. Sin esto, la rectificativa es un papel con
@@ -282,25 +296,32 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
   doc.line(MARGEN, y, ANCHO_PAGINA - MARGEN, y)
   y += 7
 
-  /* ---------- Base, IVA y total ---------- */
-  const exenta = Boolean(factura.exencion)
-  const tipo = Number(factura.tipoImpositivo ?? 21)
-  const base = exenta
-    ? Number(factura.importe)
-    : Math.round((Number(factura.importe) / (1 + tipo / 100)) * 100) / 100
-  const cuota = Math.round((Number(factura.importe) - base) * 100) / 100
+  /* ---------- Base, IGIC/IVA, retención y total ---------- */
+  const exenta = Boolean(factura.exencion) && !(Number(factura.tipoIgic) > 0)
+  const igic = Number(factura.tipoIgic) || 0
+  const irpf = Number(factura.tipoIrpf) || 0
+  const base = Number(factura.base ?? factura.total ?? 0)
 
   const fila = (etiqueta, valor, negrita = false) => {
     doc.setFont('helvetica', negrita ? 'bold' : 'normal')
     doc.setFontSize(negrita ? 12 : 10)
-    doc.text(etiqueta, ANCHO_PAGINA - MARGEN - 40, y, { align: 'right' })
+    doc.text(etiqueta, ANCHO_PAGINA - MARGEN - 45, y, { align: 'right' })
     doc.text(valor, ANCHO_PAGINA - MARGEN, y, { align: 'right' })
     y += negrita ? 7 : 5.5
   }
 
   fila('Base imponible', euros(base))
-  fila('IVA', exenta ? 'Exenta' : `${tipo}%  ${euros(cuota)}`)
-  fila('TOTAL', euros(factura.importe), true)
+  if (igic > 0) {
+    fila('IGIC', `${igic}%  ${euros(factura.cuotaIgic)}`)
+  } else {
+    fila('IGIC / IVA', 'Exenta')
+  }
+  fila('TOTAL FACTURA', euros(factura.total), true)
+
+  if (irpf > 0) {
+    fila(`Retención IRPF ${irpf}%`, `− ${euros(factura.cuotaIrpf)}`)
+    fila('LÍQUIDO A PERCIBIR', euros(factura.liquido), true)
+  }
 
   /* ---------- La mención de la exención ---------- */
   if (exenta) {
@@ -308,9 +329,27 @@ export async function construirFacturaPDF({ factura, emisor, destinatario }) {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8.5)
     doc.setTextColor(60)
-    const mencion =
-      MENCION_EXENCION[factura.exencion] ?? MENCION_EXENCION.E6
+    const mencion = factura.regimenCanarias
+      ? MENCION_EXENCION_IGIC[factura.exencion] ?? MENCION_EXENCION_IGIC.DEFECTO
+      : MENCION_EXENCION[factura.exencion] ?? MENCION_EXENCION.E6
     doc.splitTextToSize(mencion, ANCHO_UTIL).forEach((trozo) => {
+      doc.text(trozo, MARGEN, y)
+      y += 4.2
+    })
+    doc.setTextColor(0)
+  }
+
+  /* La retención de IRPF que el cliente ingresa por cuenta de la
+     consulta: conviene decirlo, aunque no sea un requisito formal. */
+  if (irpf > 0) {
+    y += 4
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(60)
+    doc.splitTextToSize(
+      `Factura sujeta a retención del ${irpf}% de IRPF, que el destinatario ingresará en la Agencia Tributaria por cuenta del emisor.`,
+      ANCHO_UTIL,
+    ).forEach((trozo) => {
       doc.text(trozo, MARGEN, y)
       y += 4.2
     })

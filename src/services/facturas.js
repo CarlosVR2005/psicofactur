@@ -64,7 +64,11 @@ function deFila(fila) {
       ? `${String(sesion.getHours()).padStart(2, '0')}:${String(sesion.getMinutes()).padStart(2, '0')}`
       : null,
     tipoSesion: fila.cita?.tipo ?? null,
-    importe: Number(fila.importe ?? 0),
+    /* `importe` = lo que cobra de verdad la consulta = líquido (base +
+       IGIC − IRPF). En las facturas de siempre —sesión exenta a un
+       particular— coincide con la base. Para la AEAT se usa `total`
+       (base + IGIC); el IRPF no viaja allí. */
+    importe: Number(fila.liquido ?? fila.importe ?? 0),
 
     /* Desglose (migración 0024). En las facturas de siempre —sesión
        exenta a un particular— base == total == liquido == importe, y
@@ -295,7 +299,10 @@ export async function crearFacturaManual({
         cuota_igic: cuotaIgic,
         tipo_irpf: irpf,
         cuota_irpf: cuotaIrpf,
-        importe: REDONDEO(base + cuotaIgic), // legado: = total_factura
+        // `importe` = líquido: base + IGIC − IRPF, que es lo que cobra
+        // de verdad la consulta. total_factura (para la AEAT) lo calcula
+        // sola la base.
+        importe: REDONDEO(base + cuotaIgic - cuotaIrpf),
         fecha_emision: aClave(hoy()),
         estado_pago: 'pendiente',
         // numero_factura lo pone el trigger de la base de datos
@@ -354,28 +361,54 @@ export async function cambiarMetodoPago(id, metodo) {
 
 /**
  * Retoca una factura que todavía es un BORRADOR (aún no registrada en
- * Hacienda). Por ahora sólo el importe: la fecha de emisión no vale la
- * pena tocarla porque la Edge Function la pone al día de hoy al emitir.
+ * Hacienda). La fecha de emisión no se toca porque la Edge Function la
+ * pone al día de hoy al emitir.
+ *
+ *  · Sesión a un particular → sólo `importe` (base = total = líquido).
+ *  · Empresa o factura manual → `base` + tipos de IGIC e IRPF; las
+ *    cuotas y el líquido se recalculan aquí.
  *
  * El `.is('verifactu_id', null)` es el cierre de seguridad: si la
  * factura ya se hubiera emitido, el update no toca ninguna fila y se
  * devuelve un aviso claro en vez de dejar pasar el cambio. Una vez
  * emitida, lo que toca es `rectificarFactura`.
  */
-export async function editarBorradorFactura(id, { importe } = {}) {
-  const valor = Number(importe)
-  if (!(valor > 0)) {
-    return fallo(
-      new Error('importe no válido'),
-      'editar la factura',
-      'El importe tiene que ser un número mayor que cero.',
-    )
+export async function editarBorradorFactura(id, { importe, base, tipoIgic, tipoIrpf } = {}) {
+  let cambios
+
+  if (base !== undefined || tipoIgic !== undefined || tipoIrpf !== undefined) {
+    const b = REDONDEO(base)
+    if (!(b > 0)) {
+      return fallo(new Error('base'), 'editar la factura', 'La base tiene que ser mayor que cero.')
+    }
+    const igic = Number(tipoIgic) || 0
+    const irpf = Number(tipoIrpf) || 0
+    const cuotaIgic = REDONDEO((b * igic) / 100)
+    const cuotaIrpf = REDONDEO((b * irpf) / 100)
+    cambios = {
+      base_imponible: b,
+      tipo_igic: igic,
+      cuota_igic: cuotaIgic,
+      tipo_irpf: irpf,
+      cuota_irpf: cuotaIrpf,
+      importe: REDONDEO(b + cuotaIgic - cuotaIrpf), // líquido
+    }
+  } else {
+    const valor = Number(importe)
+    if (!(valor > 0)) {
+      return fallo(
+        new Error('importe no válido'),
+        'editar la factura',
+        'El importe tiene que ser un número mayor que cero.',
+      )
+    }
+    cambios = { importe: valor }
   }
 
   const { data, error } = await ejecutar(
     supabase
       .from('facturas')
-      .update({ importe: valor })
+      .update(cambios)
       .eq('id', id)
       .is('verifactu_id', null)
       .select(COLUMNAS)

@@ -212,7 +212,7 @@ export async function getDatosFiscales() {
 
   const { data, error } = await supabase
     .from('psicologas')
-    .select('nif, razon_social, direccion_fiscal, logo')
+    .select('nif, razon_social, direccion_fiscal, logo, verifactu_config')
     .eq('id', id)
     .single()
 
@@ -229,6 +229,8 @@ export async function getDatosFiscales() {
       direccionFiscal: data?.direccion_fiscal ?? '',
       // El logo NO cuenta para `completo`: es opcional, la factura vale igual
       logo: data?.logo ?? null,
+      // Consulta en Canarias: el PDF cita la exención de IGIC, no de IVA
+      regimenCanarias: data?.verifactu_config?.regimenCanarias === true,
       faltan,
       completo: faltan.length === 0,
     },

@@ -90,8 +90,23 @@ export interface DatosFactura {
   /** YYYY-MM-DD del día de la sesión, si no es hoy. */
   fechaOperacion?: string | null
   descripcion: string
-  /** Lo que paga el paciente, IVA incluido si lo llevara. */
+  /**
+   * `importe_total` que se registra en la AEAT: base + cuota de IGIC.
+   * El IRPF NO entra aquí (su ámbito es IVA/IGIC), va aparte en el PDF.
+   */
   importe: number
+  /** Base imponible. Si no viene, para IVA se calcula hacia atrás desde `importe`. */
+  base?: number | null
+  /** % de IGIC. Si es > 0, la línea se declara como IGIC (impuesto «03»). */
+  tipoIgic?: number | null
+  /** Cuota de IGIC ya calculada (base · tipoIgic / 100). */
+  cuotaIgic?: number | null
+  /**
+   * Consulta en Canarias: las operaciones exentas se declaran como
+   * exentas de IGIC (impuesto «03»), no de IVA. Lo marca el gestor en
+   * `psicologas.verifactu_config.regimenCanarias`.
+   */
+  regimenCanarias?: boolean
   destinatario: Destinatario
   /**
    * Código de exención de IVA. 'E1' = artículo 20 de la Ley 37/1992,
@@ -301,22 +316,69 @@ async function llamar(
 
 /* ---------------------- Cuerpo de la factura ---------------------- */
 
+interface DatosLinea {
+  importe: number
+  base?: number | null
+  exencion?: string | null
+  tipoImpositivo?: number | null
+  tipoIgic?: number | null
+  cuotaIgic?: number | null
+  regimenCanarias?: boolean
+}
+
 /*
- * Una línea exenta NO lleva tipo_impositivo ni cuota_repercutida: sólo
- * la base y el código de exención. Y `operacion_exenta` es excluyente
- * con `calificacion_operacion`, así que en las exentas no se manda esta
- * última (Verifacti asume S1 cuando no hay exención).
+ * La línea del desglose. Tres formas:
+ *
+ *  · IGIC (Canarias): `impuesto: '03'` + base, tipo y cuota. Comprobado
+ *    contra los ejemplos de Verifacti: para IGIC la línea es igual que
+ *    la de IVA pero con `impuesto` = '03' (IVA es '01' y es el defecto).
+ *  · Exenta: sólo base + `operacion_exenta`. Nada de tipo ni cuota. En
+ *    Canarias se añade `impuesto: '03'` para declararla exenta de IGIC.
+ *  · IVA: base, tipo y cuota, sacando el IVA del total hacia atrás.
+ *
+ * `operacion_exenta` es excluyente con `calificacion_operacion`, así que
+ * en las exentas no se manda esta última (Verifacti asume S1).
  */
-function lineasDe(importe: number, exencion?: string | null, tipoImpositivo?: number | null) {
-  if (exencion) {
-    return [{ base_imponible: importeParaVerifacti(importe), operacion_exenta: exencion }]
+function lineasDe(datos: DatosLinea) {
+  const total = Number(datos.importe ?? 0)
+  const tipoIgic = Number(datos.tipoIgic ?? 0)
+
+  if (tipoIgic > 0) {
+    const base =
+      datos.base != null
+        ? Number(datos.base)
+        : Math.round((total / (1 + tipoIgic / 100)) * 100) / 100
+    const cuota =
+      datos.cuotaIgic != null
+        ? Number(datos.cuotaIgic)
+        : Math.round((total - base) * 100) / 100
+    return [
+      {
+        impuesto: '03',
+        base_imponible: importeParaVerifacti(base),
+        tipo_impositivo: String(tipoIgic),
+        cuota_repercutida: importeParaVerifacti(cuota),
+      },
+    ]
   }
 
-  // Sujeta a IVA: el precio de la sesión es lo que paga el paciente, o
-  // sea que lleva el IVA dentro y hay que sacarlo hacia atrás.
-  const tipo = Number(tipoImpositivo ?? 21)
-  const base = Math.round((importe / (1 + tipo / 100)) * 100) / 100
-  const cuota = Math.round((importe - base) * 100) / 100
+  if (datos.exencion) {
+    const base = datos.base != null ? Number(datos.base) : total
+    const linea: Record<string, unknown> = {
+      base_imponible: importeParaVerifacti(base),
+      operacion_exenta: datos.exencion,
+    }
+    if (datos.regimenCanarias) linea.impuesto = '03'
+    return [linea]
+  }
+
+  // Sujeta a IVA: el total lleva el IVA dentro, se saca hacia atrás.
+  const tipo = Number(datos.tipoImpositivo ?? 21)
+  const base =
+    datos.base != null
+      ? Number(datos.base)
+      : Math.round((total / (1 + tipo / 100)) * 100) / 100
+  const cuota = Math.round((total - base) * 100) / 100
 
   return [
     {
@@ -340,7 +402,7 @@ function cuerpoBase(datos: DatosFactura) {
     fecha_expedicion: fechaParaVerifacti(datos.fechaEmision),
     tipo_factura: nif ? 'F1' : 'F2',
     descripcion: String(datos.descripcion).slice(0, 500),
-    lineas: lineasDe(datos.importe, datos.exencion, datos.tipoImpositivo),
+    lineas: lineasDe(datos),
     importe_total: importeParaVerifacti(datos.importe),
   }
 
@@ -437,8 +499,12 @@ export interface FacturaOriginal {
   fechaEmision: string
   /** Lo que decía la original, para el bloque importe_rectificativa */
   importe: number
+  base?: number | null
   exencion?: string | null
   tipoImpositivo?: number | null
+  tipoIgic?: number | null
+  cuotaIgic?: number | null
+  regimenCanarias?: boolean
 }
 
 /**
@@ -475,11 +541,15 @@ function camposRectificativa({ original, motivo }: Rectificacion) {
   /* Lo que decía la ORIGINAL, no lo que dice ésta. Si la original
      estaba exenta la cuota era cero; si llevaba IVA hay que
      descomponerla igual que se descompuso entonces. */
-  const lineaOriginal = lineasDe(
-    original.importe,
-    original.exencion,
-    original.tipoImpositivo,
-  )[0] as Record<string, string>
+  const lineaOriginal = lineasDe({
+    importe: original.importe,
+    base: original.base,
+    exencion: original.exencion,
+    tipoImpositivo: original.tipoImpositivo,
+    tipoIgic: original.tipoIgic,
+    cuotaIgic: original.cuotaIgic,
+    regimenCanarias: original.regimenCanarias,
+  })[0] as Record<string, string>
 
   const { serie, numero } = partirNumeroFactura(original.numeroFactura)
 
