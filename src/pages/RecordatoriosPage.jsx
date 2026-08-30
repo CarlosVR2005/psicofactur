@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageCircleHeart, Send } from 'lucide-react'
+import { ChevronDown, MessageCircleHeart, Send } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Card from '../components/ui/Card'
 import Boton from '../components/ui/Boton'
@@ -34,6 +34,29 @@ export default function RecordatoriosPage() {
 
   const [filtro, setFiltro] = useState('todas')
   const [aviso, setAviso] = useState(null)
+
+  /* El «cómo funciona» sale plegado en cuanto ella lo ha cerrado una
+     vez: es una pantalla de uso diario y no hace falta releerlo. */
+  const [ayudaAbierta, setAyudaAbierta] = useState(() => {
+    try {
+      return localStorage.getItem('psicofactur:recordatorios-ayuda') !== 'cerrada'
+    } catch {
+      return true
+    }
+  })
+  const alternarAyuda = () =>
+    setAyudaAbierta((abierta) => {
+      const siguiente = !abierta
+      try {
+        localStorage.setItem(
+          'psicofactur:recordatorios-ayuda',
+          siguiente ? 'abierta' : 'cerrada',
+        )
+      } catch {
+        /* modo privado: no se recuerda, pero la pantalla funciona igual */
+      }
+      return siguiente
+    })
 
   /* Se lee una vez al entrar: decide si el botón Enviar manda por la API
      o abre WhatsApp. Va aquí y no en cada tarjeta para no consultar los
@@ -80,29 +103,49 @@ export default function RecordatoriosPage() {
           </Badge>
         }
       >
-        {/* Qué hace esta pantalla hoy y qué hará cuando esté la API */}
-        <Card className="flex flex-wrap items-center gap-3 border-marca-200 bg-marca-50/70 px-4 py-3">
-          <MessageCircleHeart
-            className="size-5 shrink-0 text-marca-600"
-            strokeWidth={1.9}
-          />
-          <p className="min-w-0 flex-1 text-sm text-marca-800">
-            {apiActiva ? (
-              <>
-                Al pulsar <strong>Enviar</strong> el recordatorio sale solo por
-                WhatsApp. Cuando el paciente pulse un botón, el estado cambia aquí
-                sin tocar nada. Los botones <strong>✓</strong> y <strong>✕</strong>{' '}
-                siguen ahí por si te contesta por otro sitio.
-              </>
-            ) : (
-              <>
-                Al pulsar <strong>Enviar</strong> se abre WhatsApp con el recordatorio
-                ya escrito y queda anotado el envío. Cuando el paciente te conteste,
-                marca su respuesta con <strong>✓</strong> o <strong>✕</strong>. Puedes
-                activar el envío automático en <strong>Ajustes</strong>.
-              </>
-            )}
-          </p>
+        {/* Qué hace esta pantalla hoy y qué hará cuando esté la API.
+            Plegable: se lee una vez y estorba el resto de días. */}
+        <Card className="overflow-hidden border-marca-200 bg-marca-50/70">
+          <button
+            type="button"
+            onClick={alternarAyuda}
+            aria-expanded={ayudaAbierta}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+          >
+            <MessageCircleHeart
+              className="size-5 shrink-0 text-marca-600"
+              strokeWidth={1.9}
+            />
+            <span className="min-w-0 flex-1 text-sm font-medium text-marca-800">
+              Cómo funciona esta pantalla
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-marca-600 transition-transform ${
+                ayudaAbierta ? 'rotate-180' : ''
+              }`}
+              strokeWidth={2}
+            />
+          </button>
+          {ayudaAbierta && (
+            <p className="border-t border-marca-200 px-4 py-3 text-sm text-marca-800">
+              {apiActiva ? (
+                <>
+                  Al pulsar <strong>Enviar</strong> el recordatorio sale solo por
+                  WhatsApp. Cuando el paciente pulse un botón, el estado cambia
+                  aquí sin tocar nada. Los botones <strong>✓</strong> y{' '}
+                  <strong>✕</strong> siguen ahí por si te contesta por otro sitio.
+                </>
+              ) : (
+                <>
+                  Al pulsar <strong>Enviar</strong> se abre WhatsApp con el
+                  recordatorio ya escrito y queda anotado el envío. Cuando el
+                  paciente te conteste, marca su respuesta con <strong>✓</strong> o{' '}
+                  <strong>✕</strong>. Puedes activar el envío automático en{' '}
+                  <strong>Ajustes</strong>.
+                </>
+              )}
+            </p>
+          )}
         </Card>
 
         {/* Contadores que además filtran */}

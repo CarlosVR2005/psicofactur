@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { NotebookPen, Plus } from 'lucide-react'
-import Card from '../../components/ui/Card'
 import Boton from '../../components/ui/Boton'
 import Cargando from '../../components/ui/Cargando'
 import AvisoError from '../../components/ui/AvisoError'
@@ -27,23 +26,18 @@ export default function HistoriaClinica({ paciente }) {
 
   return (
     <>
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-semibold text-tinta">Historia clínica</h2>
-            <p className="mt-0.5 text-sm text-tinta-suave">
-              {entradas.length === 0
-                ? 'El registro cronológico de la evolución del paciente.'
-                : `${entradas.length} ${
-                    entradas.length === 1 ? 'entrada' : 'entradas'
-                  }`}
-            </p>
-          </div>
-          <Boton icono={Plus} onClick={() => setEditando('nueva')}>
-            Nueva entrada
-          </Boton>
-        </div>
-      </Card>
+      {/* La pestaña ya dice «Historia clínica»; aquí sólo el recuento y
+          la acción, sin repetir el título ni meterlo en una tarjeta. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-tinta-suave">
+          {entradas.length === 0
+            ? 'Registro cronológico de la evolución del paciente.'
+            : `${entradas.length} ${entradas.length === 1 ? 'entrada' : 'entradas'}`}
+        </p>
+        <Boton icono={Plus} onClick={() => setEditando('nueva')}>
+          Nueva entrada
+        </Boton>
+      </div>
 
       <AvisoError error={error} alReintentar={recargar} className="mt-4" />
 
