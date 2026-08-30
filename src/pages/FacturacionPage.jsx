@@ -193,19 +193,20 @@ export default function FacturacionPage() {
           </Boton>
         }
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Resumen
-            etiqueta={mesFiltro === 'todos' ? 'Facturado este mes' : 'Facturado'}
-            valor={euros(resumen.total)}
-            detalle={`${resumen.numero} ${resumen.numero === 1 ? 'factura' : 'facturas'}`}
-          />
-          <Resumen etiqueta="Cobrado" valor={euros(resumen.cobrado)} color="text-verde" />
-          <Resumen
-            etiqueta="Pendiente de cobro"
-            valor={euros(resumen.pendiente)}
-            color="text-ambar"
-            className="col-span-2 sm:col-span-1"
-          />
+        <div className="overflow-hidden rounded-2xl border border-marca-200 bg-gradient-to-b from-marca-50 to-marca-50/40 shadow-suave">
+          <dl className="grid grid-cols-3 divide-x divide-marca-200">
+            <CifraMes
+              etiqueta={mesFiltro === 'todos' ? 'Facturado este mes' : 'Facturado'}
+              valor={euros(resumen.total)}
+              apunte={`${resumen.numero} ${resumen.numero === 1 ? 'factura' : 'facturas'}`}
+            />
+            <CifraMes etiqueta="Cobrado" valor={euros(resumen.cobrado)} color="text-verde" />
+            <CifraMes
+              etiqueta="Pendiente de cobro"
+              valor={euros(resumen.pendiente)}
+              color="text-ambar"
+            />
+          </dl>
         </div>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -305,16 +306,23 @@ export default function FacturacionPage() {
   )
 }
 
-function Resumen({ etiqueta, valor, detalle, color = 'text-tinta', className = '' }) {
+/* Una celda de la banda-resumen del mes. Mismo lenguaje que la tira de
+   cifras de la ficha del paciente: etiqueta pequeña en versal, cifra
+   grande y tabular. */
+function CifraMes({ etiqueta, valor, apunte, color = 'text-tinta' }) {
   return (
-    <Card className={`px-4 py-3.5 ${className}`}>
-      <p className="text-xs font-medium uppercase tracking-wide text-tinta-tenue">
+    <div className="min-w-0 px-3 py-3 sm:px-4 sm:py-3.5">
+      <dt className="text-[0.68rem] font-semibold uppercase tracking-wider text-marca-600">
         {etiqueta}
-      </p>
-      <p className={`mt-1 text-xl font-semibold tabular-nums sm:text-2xl ${color}`}>
+      </dt>
+      <dd className={`mt-1 text-lg font-semibold tabular-nums tracking-tight sm:text-2xl ${color}`}>
         {valor}
-      </p>
-      {detalle && <p className="text-xs text-tinta-suave">{detalle}</p>}
-    </Card>
+        {apunte && (
+          <span className="mt-0.5 block text-xs font-medium tracking-normal text-tinta-tenue">
+            {apunte}
+          </span>
+        )}
+      </dd>
+    </div>
   )
 }
