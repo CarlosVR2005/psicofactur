@@ -212,7 +212,7 @@ export async function getDatosFiscales() {
 
   const { data, error } = await supabase
     .from('psicologas')
-    .select('nif, razon_social, direccion_fiscal, logo')
+    .select('nif, razon_social, direccion_fiscal, iban, logo, verifactu_config')
     .eq('id', id)
     .single()
 
@@ -227,8 +227,13 @@ export async function getDatosFiscales() {
       nif: data?.nif ?? '',
       razonSocial: data?.razon_social ?? '',
       direccionFiscal: data?.direccion_fiscal ?? '',
+      // El IBAN tampoco cuenta para `completo`: si está, sale en la
+      // factura como forma de pago; si no, no se muestra ese bloque
+      iban: data?.iban ?? '',
       // El logo NO cuenta para `completo`: es opcional, la factura vale igual
       logo: data?.logo ?? null,
+      // Consulta en Canarias: el PDF cita la exención de IGIC, no de IVA
+      regimenCanarias: data?.verifactu_config?.regimenCanarias === true,
       faltan,
       completo: faltan.length === 0,
     },
@@ -243,9 +248,12 @@ export async function getDatosFiscales() {
  * mayúsculas— porque es como lo espera la AEAT, y así da igual cómo lo
  * escriba quien rellena el formulario.
  *
- * @param {{nif: string, razonSocial: string, direccionFiscal: string}} datos
+ * El IBAN se guarda sin espacios y en mayúsculas, que es como lo
+ * espera el CHECK de la base y como se compara un número de cuenta.
+ *
+ * @param {{nif: string, razonSocial: string, direccionFiscal: string, iban?: string}} datos
  */
-export async function guardarDatosFiscales({ nif, razonSocial, direccionFiscal }) {
+export async function guardarDatosFiscales({ nif, razonSocial, direccionFiscal, iban }) {
   const { data: sesion } = await supabase.auth.getUser()
   const id = sesion?.user?.id
   if (!id) {
@@ -258,18 +266,27 @@ export async function guardarDatosFiscales({ nif, razonSocial, direccionFiscal }
       nif: normalizarNif(nif) || null,
       razon_social: String(razonSocial ?? '').trim() || null,
       direccion_fiscal: String(direccionFiscal ?? '').trim() || null,
+      iban: String(iban ?? '').replace(/\s+/g, '').toUpperCase() || null,
     })
     .eq('id', id)
-    .select('nif, razon_social, direccion_fiscal')
+    .select('nif, razon_social, direccion_fiscal, iban')
     .single()
 
-  if (error) return fallo(error, 'guardar tus datos de facturación')
+  if (error) {
+    /* 23514 = el CHECK psicologas_iban_razonable de la migración 0026. */
+    const mensaje =
+      error.code === '23514'
+        ? 'Ese número de cuenta no parece un IBAN válido. Revísalo (empieza por dos letras del país, p. ej. ES).'
+        : undefined
+    return fallo(error, 'guardar tus datos de facturación', mensaje)
+  }
 
   return {
     data: {
       nif: data.nif ?? '',
       razonSocial: data.razon_social ?? '',
       direccionFiscal: data.direccion_fiscal ?? '',
+      iban: data.iban ?? '',
     },
     error: null,
   }

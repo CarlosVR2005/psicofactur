@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, FileWarning, Pencil, Wrench } from 'lucide-react'
+import { Ban, FileWarning, Pencil } from 'lucide-react'
 import Avatar from '../../components/ui/Avatar'
 import Badge from '../../components/ui/Badge'
 import EstadoPagoBadge from './EstadoPagoBadge'
@@ -26,11 +26,8 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
   // 'cancelado' = no se cobra; 'anulada' = la sustituye una rectificativa
   const anulada = factura.estado === 'cancelado' || factura.estado === 'anulada'
 
-  /* Las facturas a empresa y las manuales todavía no se pueden registrar
-     en Hacienda: falta llevar el IGIC y el destinatario empresa al envío
-     a Verifacti. Hasta entonces se muestran como borrador «en
-     preparación» y no se ofrece emitir ni editar. */
-  const enPreparacion = (factura.esEmpresa || factura.esManual) && !factura.emitida
+  // Lleva desglose (base / IGIC / IRPF) que merece la pena enseñar
+  const conDesglose = factura.tipoIgic > 0 || factura.tipoIrpf > 0
 
   const cambiar = async (estado) => {
     setTrabajando(true)
@@ -103,19 +100,23 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
         </p>
       </div>
 
-      <p
-        className={`ml-auto text-right font-semibold tabular-nums text-tinta ${
-          anulada ? 'line-through' : ''
-        }`}
+      <div
+        className={`ml-auto text-right ${anulada ? 'line-through' : ''}`}
       >
-        {euros(factura.importe)}
-      </p>
+        <p className="font-semibold tabular-nums text-tinta">{euros(factura.importe)}</p>
+        {conDesglose && (
+          <p className="text-xs text-tinta-tenue tabular-nums">
+            base {euros(factura.base)}
+            {factura.tipoIgic > 0 && ` · IGIC ${factura.tipoIgic}%`}
+            {factura.tipoIrpf > 0 && ` · −IRPF ${factura.tipoIrpf}%`}
+          </p>
+        )}
+      </div>
 
       <div className="flex items-center gap-1.5">
-        {/* Editar sólo mientras es borrador de sesión: en cuanto sale
-            hacia Hacienda lo que queda es rectificarla. Las de empresa /
-            manuales todavía no se editan aquí (su desglose vive aparte). */}
-        {!factura.emitida && !anulada && !enPreparacion && (
+        {/* Editar sólo mientras es borrador: en cuanto sale hacia
+            Hacienda lo que queda es rectificarla. */}
+        {!factura.emitida && !anulada && (
           <button
             type="button"
             onClick={() => setEditando(true)}
@@ -128,15 +129,7 @@ export default function FacturaFila({ factura, alCambiar, alFallar, alRectificar
           </button>
         )}
 
-        {enPreparacion ? (
-          <Badge tono="neutro" tamano="sm" icono={Wrench}>
-            <span title="Las facturas a empresa y las manuales todavía no se pueden registrar en Hacienda.">
-              En preparación
-            </span>
-          </Badge>
-        ) : (
-          <BotonEmitir factura={factura} alEmitir={apuntarEmision} alFallar={alFallar} />
-        )}
+        <BotonEmitir factura={factura} alEmitir={apuntarEmision} alFallar={alFallar} />
 
         <BotonPDF factura={factura} alFallar={alFallar} />
 

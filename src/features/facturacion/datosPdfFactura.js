@@ -33,12 +33,34 @@ export async function prepararFacturaPDF(factura) {
   }
 
   /* El concepto tiene que decir lo mismo que se le mandó a la AEAT como
-     `descripcion`, que se compone igual en la Edge Function. */
+     `descripcion`, que se compone igual en la Edge Function: el concepto
+     propio si la factura es manual, o el tipo de sesión si sale de una
+     cita. */
   const etiqueta =
     TIPOS_CITA[factura.tipoSesion]?.descripcionFactura ?? 'Sesión de psicoterapia'
-  const descripcion = factura.fechaSesion
-    ? `${etiqueta} del ${factura.fechaSesion.split('-').reverse().join('/')}`
-    : etiqueta
+  const descripcion =
+    factura.concepto?.trim() ||
+    (factura.fechaSesion
+      ? `${etiqueta} del ${factura.fechaSesion.split('-').reverse().join('/')}`
+      : etiqueta)
+
+  // Con IGIC la operación está sujeta y no exenta; si no, exenta por
+  // asistencia sanitaria.
+  const exencion = factura.tipoIgic > 0 ? null : 'E1'
+
+  /* Destinatario: para una factura a empresa, la empresa (CIF); para un
+     particular, la persona (DNI). Si la factura ya se emitió se usa la
+     copia que se guardó ese día, no la ficha de ahora. */
+  const destinatario = factura.esEmpresa
+    ? {
+        nombre: factura.destinatarioNombre || factura.empresaRazonSocial,
+        dni: factura.destinatarioNif || factura.empresaCif,
+        domicilio: factura.destinatarioDomicilio || factura.empresaDomicilio,
+      }
+    : {
+        nombre: factura.pacienteNombre,
+        dni: factura.pacienteDni,
+      }
 
   return {
     data: {
@@ -50,13 +72,21 @@ export async function prepararFacturaPDF(factura) {
         fechaEmision: factura.fechaEmision,
         fechaSesion: factura.fechaSesion,
         descripcion,
-        importe: factura.importe,
-        // Por ahora todas las sesiones van exentas por artículo 20
-        exencion: 'E1',
+        // Desglose: `total` (base + IGIC) es el TOTAL de la factura;
+        // `liquido` (total − IRPF) es lo que se cobra de verdad.
+        base: factura.base,
+        tipoIgic: factura.tipoIgic || 0,
+        cuotaIgic: factura.cuotaIgic || 0,
+        tipoIrpf: factura.tipoIrpf || 0,
+        cuotaIrpf: factura.cuotaIrpf || 0,
+        total: factura.total,
+        liquido: factura.liquido ?? factura.importe,
+        exencion,
+        regimenCanarias: emisor.regimenCanarias === true,
         qrUrl: factura.qrUrl,
       },
       emisor,
-      destinatario: { nombre: factura.pacienteNombre, dni: factura.pacienteDni },
+      destinatario,
     },
     error: null,
   }

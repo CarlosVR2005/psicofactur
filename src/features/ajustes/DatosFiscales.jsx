@@ -12,6 +12,11 @@ import {
 import { errorDeNif, normalizarNif } from '../../lib/nif'
 import { FORMATOS_LOGO, prepararLogo } from '../../lib/logo'
 
+/* Un IBAN se guarda sin espacios y en mayúsculas; se enseña agrupado de
+   cuatro en cuatro, que es como se lee. */
+const ibanLimpio = (s) => String(s ?? '').replace(/\s+/g, '').toUpperCase()
+const ibanBonito = (s) => ibanLimpio(s).replace(/(.{4})/g, '$1 ').trim()
+
 /* ================================================================
    Los datos fiscales de la consulta.
 
@@ -31,7 +36,7 @@ import { FORMATOS_LOGO, prepararLogo } from '../../lib/logo'
    ================================================================ */
 export default function DatosFiscales({ alAvisar }) {
   const [datos, setDatos] = useState(null)
-  const [form, setForm] = useState({ nif: '', razonSocial: '', direccionFiscal: '' })
+  const [form, setForm] = useState({ nif: '', razonSocial: '', direccionFiscal: '', iban: '' })
   const [logo, setLogo] = useState(null)
   const [subiendoLogo, setSubiendoLogo] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -47,6 +52,7 @@ export default function DatosFiscales({ alAvisar }) {
           nif: data.nif,
           razonSocial: data.razonSocial,
           direccionFiscal: data.direccionFiscal,
+          iban: ibanBonito(data.iban),
         })
       }
     })
@@ -60,7 +66,8 @@ export default function DatosFiscales({ alAvisar }) {
   const cambiado =
     normalizarNif(form.nif) !== datos.nif ||
     form.razonSocial.trim() !== datos.razonSocial ||
-    form.direccionFiscal.trim() !== datos.direccionFiscal
+    form.direccionFiscal.trim() !== datos.direccionFiscal ||
+    ibanLimpio(form.iban) !== ibanLimpio(datos.iban)
 
   /* El logo se guarda solo al elegirlo: no espera al botón Guardar,
      porque se ve el resultado al momento y esperar sería confuso.
@@ -105,6 +112,7 @@ export default function DatosFiscales({ alAvisar }) {
       nif: data.nif,
       razonSocial: data.razonSocial,
       direccionFiscal: data.direccionFiscal,
+      iban: ibanBonito(data.iban),
     })
     alAvisar?.({ tipo: 'exito', titulo: 'Datos de facturación guardados' })
   }
@@ -233,6 +241,19 @@ export default function DatosFiscales({ alAvisar }) {
           ayuda="Calle, número, código postal y localidad."
         >
           <AreaTexto {...campo('direccionFiscal')} rows={2} placeholder="Calle, nº · CP Localidad" />
+        </Campo>
+
+        <Campo
+          etiqueta="Número de cuenta (IBAN)"
+          ayuda="Opcional. Sale en la factura como forma de pago, para que sepan a dónde transferir."
+        >
+          <Entrada
+            {...campo('iban')}
+            onBlur={() => setForm((f) => ({ ...f, iban: ibanBonito(f.iban) }))}
+            placeholder="ES00 0000 0000 0000 0000 0000"
+            autoComplete="off"
+            spellCheck={false}
+          />
         </Campo>
       </div>
 
