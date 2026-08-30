@@ -3,30 +3,25 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Archive,
   ArchiveRestore,
-  BadgeEuro,
   Building2,
   CakeSlice,
-  CalendarPlus,
   ChevronLeft,
   IdCard,
   Mail,
   MessageCircle,
-  Pencil,
   Phone,
   ShieldAlert,
-  Sprout,
   Trash2,
   Users,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Boton from '../components/ui/Boton'
-import Avatar from '../components/ui/Avatar'
-import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import Segmentado from '../components/ui/Segmentado'
 import Cargando from '../components/ui/Cargando'
 import AvisoError from '../components/ui/AvisoError'
 import DatoFicha from '../features/pacientes/DatoFicha'
+import CabeceraPaciente from '../features/pacientes/CabeceraPaciente'
 import PacienteModal from '../features/pacientes/PacienteModal'
 import EliminarPacienteModal from '../features/pacientes/EliminarPacienteModal'
 import ConsentimientoCard from '../features/pacientes/ConsentimientoCard'
@@ -39,8 +34,8 @@ import { usePaciente } from '../hooks/usePacientes'
 import { useCitasDePaciente } from '../hooks/useCitas'
 import { useFacturas } from '../hooks/useFacturas'
 import { cambiarActivo } from '../services/pacientes'
-import { aClave, edad, etiquetaDia, fechaNumerica, hoy, MESES } from '../lib/fechas'
-import { euros, eurosCorto, telefono } from '../lib/formato'
+import { aClave, edad, etiquetaDia, fechaNumerica, hoy } from '../lib/fechas'
+import { euros, telefono } from '../lib/formato'
 import { esMenorDeEdad, firmanLosProgenitores, progenitoresDe } from '../lib/menores'
 
 export default function PacienteDetallePage() {
@@ -90,7 +85,6 @@ export default function PacienteDetallePage() {
   const anos = paciente.fechaNacimiento ? edad(paciente.fechaNacimiento) : null
   const menor = esMenorDeEdad(paciente.fechaNacimiento)
   const progenitores = progenitoresDe(paciente)
-  const inicio = paciente.inicioTerapia
   const claveHoy = aClave(hoy())
   // `citas` viene de más reciente a más antigua
   const proximas = citas.filter((c) => c.fecha >= claveHoy).reverse().slice(0, 5)
@@ -121,55 +115,13 @@ export default function PacienteDetallePage() {
 
       <AvisoError error={errorAccion} className="mb-4" />
 
-      {/* Cabecera de la ficha */}
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <Avatar nombre={paciente.nombre} tamano="xl" />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-tinta">
-              {paciente.nombre}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {!paciente.activo && <Badge tono="neutro">Archivado</Badge>}
-              {menor ? (
-                <Badge tono="ambar" tamano="sm" icono={ShieldAlert}>
-                  Menor de edad{anos !== null && ` · ${anos} años`}
-                </Badge>
-              ) : (
-                anos !== null && (
-                  <Badge tono="marca" tamano="sm">
-                    {anos} años
-                  </Badge>
-                )
-              )}
-              {paciente.tipoCliente === 'empresa' && (
-                <Badge tono="azul" tamano="sm" icono={Building2}>
-                  Empresa
-                </Badge>
-              )}
-              <Badge tono="neutro" tamano="sm">
-                {eurosCorto(paciente.precioSesion)} por sesión
-              </Badge>
-              <Badge tono="neutro" tamano="sm">
-                {anteriores.length}{' '}
-                {anteriores.length === 1 ? 'sesión' : 'sesiones'} realizadas
-              </Badge>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Boton
-              variante="secundario"
-              icono={Pencil}
-              onClick={() => setEditando(true)}
-            >
-              Editar
-            </Boton>
-            <Boton icono={CalendarPlus} onClick={() => setNuevaCita(true)}>
-              Nueva cita
-            </Boton>
-          </div>
-        </div>
-      </Card>
+      <CabeceraPaciente
+        paciente={paciente}
+        sesiones={anteriores.length}
+        proximaCita={proximas[0] ?? null}
+        alEditar={() => setEditando(true)}
+        alNuevaCita={() => setNuevaCita(true)}
+      />
 
       <div className="mt-4">
         <Segmentado
@@ -188,158 +140,9 @@ export default function PacienteDetallePage() {
         </div>
       ) : (
        <>
-      {/* Datos de contacto y económicos */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-       <div className="space-y-4">
-        <Card className="p-5 sm:p-6">
-          <h2 className="mb-4 font-semibold text-tinta">Datos de contacto</h2>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <DatoFicha
-              icono={Phone}
-              etiqueta="Teléfono"
-              valor={paciente.telefono ? telefono(paciente.telefono) : ''}
-              href={paciente.telefono ? `tel:+34${paciente.telefono}` : undefined}
-            />
-            <DatoFicha
-              icono={MessageCircle}
-              etiqueta="WhatsApp"
-              valor={paciente.telefono ? 'Escribir mensaje' : ''}
-              href={
-                paciente.telefono ? `https://wa.me/34${paciente.telefono}` : undefined
-              }
-            />
-            <DatoFicha
-              icono={Mail}
-              etiqueta="Correo"
-              valor={paciente.correo}
-              href={paciente.correo ? `mailto:${paciente.correo}` : undefined}
-            />
-            <DatoFicha icono={IdCard} etiqueta="DNI" valor={paciente.dni} />
-            {paciente.tipoCliente === 'empresa' && (
-              <>
-                <DatoFicha
-                  icono={Building2}
-                  etiqueta="Empresa"
-                  valor={paciente.empresaRazonSocial}
-                  ayuda={paciente.empresaCif || undefined}
-                />
-                <DatoFicha
-                  icono={Building2}
-                  etiqueta="Domicilio fiscal"
-                  valor={paciente.empresaDomicilio}
-                />
-              </>
-            )}
-            <DatoFicha
-              icono={CakeSlice}
-              etiqueta="Fecha de nacimiento"
-              valor={
-                paciente.fechaNacimiento ? fechaNumerica(paciente.fechaNacimiento) : ''
-              }
-              ayuda={anos !== null ? `${anos} años` : undefined}
-            />
-            <DatoFicha
-              icono={Sprout}
-              etiqueta="En terapia desde"
-              valor={
-                inicio
-                  ? `${MESES[Number(inicio.slice(5, 7)) - 1]} de ${inicio.slice(0, 4)}`
-                  : ''
-              }
-              ayuda={inicio ? fechaNumerica(inicio) : undefined}
-            />
-            <DatoFicha
-              icono={BadgeEuro}
-              etiqueta="Precio por sesión"
-              valor={euros(paciente.precioSesion)}
-            />
-          </div>
-        </Card>
-
-        {(menor || progenitores.length > 0) && (
-          <Card className="p-5 sm:p-6">
-            <h2 className="mb-1 flex items-center gap-2 font-semibold text-tinta">
-              <Users className="size-4.5 text-tinta-tenue" strokeWidth={1.9} />
-              Progenitores o tutores
-            </h2>
-            <p className="mb-4 text-sm text-tinta-suave">
-              {firmanLosProgenitores(paciente.fechaNacimiento)
-                ? 'Son ellos quienes firman el consentimiento y la cláusula de datos.'
-                : 'Contacto de la familia del paciente.'}
-            </p>
-
-            {progenitores.length === 0 ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
-                <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
-                <p>
-                  Es un paciente menor de edad y no hay ningún progenitor
-                  apuntado.{' '}
-                  <button
-                    type="button"
-                    onClick={() => setEditando(true)}
-                    className="font-semibold underline underline-offset-2"
-                  >
-                    Añádelos en la ficha
-                  </button>{' '}
-                  para poder mandarles el consentimiento.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {progenitores.map((p) => (
-                  <div key={p.rol}>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
-                      {p.indice === 1
-                        ? 'Primer progenitor o tutor'
-                        : 'Segundo progenitor o tutor'}
-                    </p>
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <DatoFicha icono={Users} etiqueta="Nombre" valor={p.nombre} />
-                      <DatoFicha icono={IdCard} etiqueta="DNI" valor={p.dni} />
-                      <DatoFicha
-                        icono={Phone}
-                        etiqueta="Teléfono"
-                        valor={p.telefono ? telefono(p.telefono) : ''}
-                        href={p.telefono ? `tel:+34${p.telefono}` : undefined}
-                      />
-                      <DatoFicha
-                        icono={Mail}
-                        etiqueta="Correo"
-                        valor={p.correo}
-                        href={p.correo ? `mailto:${p.correo}` : undefined}
-                      />
-                    </div>
-                  </div>
-                ))}
-                {menor && progenitores.some((p) => !p.correo) && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
-                    <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
-                    <p>
-                      Falta el correo de algún progenitor.{' '}
-                      <button
-                        type="button"
-                        onClick={() => setEditando(true)}
-                        className="font-semibold underline underline-offset-2"
-                      >
-                        Complétalo en la ficha
-                      </button>
-                      : sin correo no se le puede mandar el consentimiento.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        )}
-       </div>
-
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr] lg:items-start">
+        {/* Columna principal: lo clínico */}
         <div className="space-y-4">
-          <ConsentimientoCard
-            paciente={paciente}
-            alRefrescar={recargar}
-            alEditarFicha={() => setEditando(true)}
-          />
-
           <ObservacionesCard paciente={paciente} alGuardar={setPaciente} />
 
           {/* Próximas citas */}
@@ -405,50 +208,187 @@ export default function PacienteDetallePage() {
               </ul>
             )}
           </Card>
+        </div>
 
-          {/* Archivar / eliminar */}
-          <Card className="divide-y divide-borde p-0">
-            <div className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
-              <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-tinta">
-                  {paciente.activo ? 'Archivar paciente' : 'Paciente archivado'}
-                </h2>
-                <p className="mt-0.5 text-sm text-tinta-suave">
-                  {paciente.activo
-                    ? 'Deja de aparecer en el listado, pero no se borra nada.'
-                    : 'No aparece en el listado habitual. Puedes reactivarlo cuando quieras.'}
-                </p>
-              </div>
-              <Boton
-                variante={paciente.activo ? 'peligro' : 'secundario'}
-                icono={paciente.activo ? Archive : ArchiveRestore}
-                onClick={() =>
-                  paciente.activo ? setConfirmarArchivo(true) : alternarArchivo()
+        {/* Columna de referencia: datos de consulta */}
+        <div className="space-y-4">
+          <Card className="p-5 sm:p-6">
+            <h2 className="mb-4 font-semibold text-tinta">Datos de contacto</h2>
+            <div className="grid gap-5">
+              <DatoFicha
+                icono={Phone}
+                etiqueta="Teléfono"
+                valor={paciente.telefono ? telefono(paciente.telefono) : ''}
+                href={paciente.telefono ? `tel:+34${paciente.telefono}` : undefined}
+              />
+              <DatoFicha
+                icono={MessageCircle}
+                etiqueta="WhatsApp"
+                valor={paciente.telefono ? 'Escribir mensaje' : ''}
+                href={
+                  paciente.telefono ? `https://wa.me/34${paciente.telefono}` : undefined
                 }
-                disabled={archivando}
-              >
-                {paciente.activo ? 'Archivar' : 'Reactivar'}
-              </Boton>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 p-5 sm:p-6">
-              <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-tinta">Eliminar paciente</h2>
-                <p className="mt-0.5 text-sm text-tinta-suave">
-                  Borra la ficha para siempre. Sólo para fichas creadas por
-                  error: si tiene facturas, no se puede.
-                </p>
-              </div>
-              <Boton
-                variante="peligro"
-                tamano="sm"
-                icono={Trash2}
-                onClick={() => setEliminarAbierto(true)}
-              >
-                Eliminar
-              </Boton>
+              />
+              <DatoFicha
+                icono={Mail}
+                etiqueta="Correo"
+                valor={paciente.correo}
+                href={paciente.correo ? `mailto:${paciente.correo}` : undefined}
+              />
+              <DatoFicha icono={IdCard} etiqueta="DNI" valor={paciente.dni} />
+              {paciente.tipoCliente === 'empresa' && (
+                <>
+                  <DatoFicha
+                    icono={Building2}
+                    etiqueta="Empresa"
+                    valor={paciente.empresaRazonSocial}
+                    ayuda={paciente.empresaCif || undefined}
+                  />
+                  <DatoFicha
+                    icono={Building2}
+                    etiqueta="Domicilio fiscal"
+                    valor={paciente.empresaDomicilio}
+                  />
+                </>
+              )}
+              <DatoFicha
+                icono={CakeSlice}
+                etiqueta="Fecha de nacimiento"
+                valor={
+                  paciente.fechaNacimiento
+                    ? fechaNumerica(paciente.fechaNacimiento)
+                    : ''
+                }
+                ayuda={anos !== null ? `${anos} años` : undefined}
+              />
             </div>
           </Card>
+
+          {(menor || progenitores.length > 0) && (
+            <Card className="p-5 sm:p-6">
+              <h2 className="mb-1 flex items-center gap-2 font-semibold text-tinta">
+                <Users className="size-4.5 text-tinta-tenue" strokeWidth={1.9} />
+                Progenitores o tutores
+              </h2>
+              <p className="mb-4 text-sm text-tinta-suave">
+                {firmanLosProgenitores(paciente.fechaNacimiento)
+                  ? 'Son ellos quienes firman el consentimiento y la cláusula de datos.'
+                  : 'Contacto de la familia del paciente.'}
+              </p>
+
+              {progenitores.length === 0 ? (
+                <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
+                  <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
+                  <p>
+                    Es un paciente menor de edad y no hay ningún progenitor
+                    apuntado.{' '}
+                    <button
+                      type="button"
+                      onClick={() => setEditando(true)}
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Añádelos en la ficha
+                    </button>{' '}
+                    para poder mandarles el consentimiento.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {progenitores.map((p) => (
+                    <div key={p.rol}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-tinta-tenue">
+                        {p.indice === 1
+                          ? 'Primer progenitor o tutor'
+                          : 'Segundo progenitor o tutor'}
+                      </p>
+                      <div className="grid gap-4">
+                        <DatoFicha icono={Users} etiqueta="Nombre" valor={p.nombre} />
+                        <DatoFicha icono={IdCard} etiqueta="DNI" valor={p.dni} />
+                        <DatoFicha
+                          icono={Phone}
+                          etiqueta="Teléfono"
+                          valor={p.telefono ? telefono(p.telefono) : ''}
+                          href={p.telefono ? `tel:+34${p.telefono}` : undefined}
+                        />
+                        <DatoFicha
+                          icono={Mail}
+                          etiqueta="Correo"
+                          valor={p.correo}
+                          href={p.correo ? `mailto:${p.correo}` : undefined}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {menor && progenitores.some((p) => !p.correo) && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-sm leading-relaxed text-ambar">
+                      <ShieldAlert className="mt-0.5 size-5 shrink-0" strokeWidth={2} />
+                      <p>
+                        Falta el correo de algún progenitor.{' '}
+                        <button
+                          type="button"
+                          onClick={() => setEditando(true)}
+                          className="font-semibold underline underline-offset-2"
+                        >
+                          Complétalo en la ficha
+                        </button>
+                        : sin correo no se le puede mandar el consentimiento.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
+
+          <ConsentimientoCard
+            paciente={paciente}
+            alRefrescar={recargar}
+            alEditarFicha={() => setEditando(true)}
+          />
+        </div>
+      </div>
+
+      {/* Archivar / eliminar — zona discreta, fuera de las tarjetas */}
+      <div className="mt-4 flex flex-col overflow-hidden rounded-2xl border border-borde bg-white/50 sm:flex-row">
+        <div className="flex flex-1 flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-tinta-suave">
+              {paciente.activo ? 'Archivar paciente' : 'Paciente archivado'}
+            </h2>
+            <p className="mt-0.5 text-xs text-tinta-tenue">
+              {paciente.activo
+                ? 'Deja de aparecer en el listado, pero no se borra nada.'
+                : 'No aparece en el listado habitual. Puedes reactivarlo cuando quieras.'}
+            </p>
+          </div>
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            icono={paciente.activo ? Archive : ArchiveRestore}
+            onClick={() =>
+              paciente.activo ? setConfirmarArchivo(true) : alternarArchivo()
+            }
+            disabled={archivando}
+          >
+            {paciente.activo ? 'Archivar' : 'Reactivar'}
+          </Boton>
+        </div>
+
+        <div className="flex flex-1 flex-wrap items-center justify-between gap-3 border-t border-borde p-4 sm:border-l sm:border-t-0 sm:p-5">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-tinta-suave">Eliminar ficha</h2>
+            <p className="mt-0.5 text-xs text-tinta-tenue">
+              Sólo para fichas creadas por error: si tiene facturas, no se puede.
+            </p>
+          </div>
+          <Boton
+            variante="peligro"
+            tamano="sm"
+            icono={Trash2}
+            onClick={() => setEliminarAbierto(true)}
+          >
+            Eliminar
+          </Boton>
         </div>
       </div>
        </>

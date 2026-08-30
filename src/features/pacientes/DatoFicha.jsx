@@ -20,7 +20,11 @@ export default function DatoFicha({ icono: Icono, etiqueta, valor, href, ayuda }
   return (
     <div className="flex min-w-0 items-start gap-3">
       {Icono && (
-        <span className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-xl bg-crema text-tinta-suave">
+        <span
+          className={`mt-1 flex size-9 shrink-0 items-center justify-center rounded-xl ${
+            href ? 'bg-crema text-tinta-suave' : 'text-tinta-tenue'
+          }`}
+        >
           <Icono className="size-4.5" strokeWidth={1.9} />
         </span>
       )}

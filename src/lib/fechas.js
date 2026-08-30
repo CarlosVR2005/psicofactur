@@ -161,6 +161,26 @@ export function haceRato(fechaISO) {
   return dias === 1 ? 'hace 1 día' : `hace ${dias} días`
 }
 
+/** 'YYYY-MM-DD' -> 'hace 1 año y 6 meses' · 'hace 3 meses' · 'este mes'.
+    Para la antigüedad del paciente en la cabecera de la ficha. */
+export function tiempoDesde(clave) {
+  if (!clave) return ''
+  const desde = deClave(clave)
+  const h = hoy()
+  let meses =
+    (h.getFullYear() - desde.getFullYear()) * 12 + (h.getMonth() - desde.getMonth())
+  if (h.getDate() < desde.getDate()) meses--
+  if (meses <= 0) return 'este mes'
+
+  const cuenta = (n, singular, plural) => (n === 1 ? `1 ${singular}` : `${n} ${plural}`)
+  const anos = Math.floor(meses / 12)
+  const resto = meses % 12
+  if (anos === 0) return `hace ${cuenta(resto, 'mes', 'meses')}`
+  const parteAnos = cuenta(anos, 'año', 'años')
+  if (resto === 0) return `hace ${parteAnos}`
+  return `hace ${parteAnos} y ${cuenta(resto, 'mes', 'meses')}`
+}
+
 export function edad(fechaNacimiento) {
   const n = deClave(fechaNacimiento)
   const h = hoy()
