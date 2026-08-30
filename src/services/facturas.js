@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { ejecutar, exito, fallo, psicologaActualId } from './base'
-import { aClave, hoy, sumarDias } from '../lib/fechas'
+import { aClave, hoy } from '../lib/fechas'
 
 /* ================================================================
    FACTURAS — tabla `facturas`
@@ -146,55 +146,97 @@ function deFila(fila) {
    emisión, «desaparecía» de la pantalla un mes entero de golpe. */
 const TAMANO_PAGINA = 1000
 
+/* El mes por el que agrupa y filtra la pantalla es el de la SESIÓN
+   (`cita.fecha_hora`), NO el de emisión: los borradores los crea el cron
+   el día que corre, así que `fecha_emision` de casi todos es el mismo y
+   no sirve para separar meses. Las facturas manuales no tienen cita: esas
+   sí van por `fecha_emision`. */
+function primerDiaDelMes(mes) {
+  const [anio, m] = mes.split('-').map(Number)
+  return { inicio: new Date(anio, m - 1, 1), fin: new Date(anio, m, 1) }
+}
+
+/** Mes de la sesión ('YYYY-MM'), igual que `deFila`: el de la cita, y si
+    no hay cita, el de emisión. */
+function mesSesionDe(fila) {
+  const base = fila.cita?.fecha_hora
+    ? aClave(new Date(fila.cita.fecha_hora))
+    : fila.fecha_emision
+  return String(base).slice(0, 7)
+}
+
 /**
  * Facturas de la más reciente a la más antigua.
  *
  * @param {{ mes?: string }} opciones  `mes` = 'YYYY-MM' para traer sólo
- *   ese mes; sin él (o 'todos') vienen todas. La pantalla de facturación
- *   carga un mes cada vez para no arrastrar miles de filas en cada
- *   visita; «Todos los meses» es el que pide la lista entera.
+ *   las de ese mes (de sesión); sin él (o 'todos') vienen todas. La
+ *   pantalla de facturación carga un mes cada vez para no arrastrar miles
+ *   de filas en cada visita; «Todos los meses» pide la lista entera.
  */
 export async function getFacturas({ mes } = {}) {
-  /* La ventana se filtra por FECHA DE EMISIÓN, pero la pantalla agrupa
-     por mes de la SESIÓN. Casi siempre coinciden (el borrador nace el
-     mismo día o al siguiente), pero una sesión de fin de mes puede
-     facturarse ya entrado el mes siguiente. Se ensancha una semana por
-     cada lado y el filtro fino por `mesSesion` lo hace luego la pantalla. */
-  let rango = null
-  if (mes && mes !== 'todos') {
-    const [anio, m] = mes.split('-').map(Number)
-    rango = {
-      desde: aClave(sumarDias(new Date(anio, m - 1, 1), -7)),
-      hasta: aClave(sumarDias(new Date(anio, m, 1), 7)),
+  if (!mes || mes === 'todos') {
+    const filas = []
+    for (let desde = 0; ; desde += TAMANO_PAGINA) {
+      const { data, error } = await ejecutar(
+        supabase
+          .from('facturas')
+          .select(COLUMNAS)
+          .order('fecha_emision', { ascending: false })
+          .order('numero_factura', { ascending: false })
+          .range(desde, desde + TAMANO_PAGINA - 1),
+        'cargar las facturas',
+      )
+      if (error) return { data: null, error }
+      filas.push(...data)
+      if (data.length < TAMANO_PAGINA) break
     }
+    return exito(filas.map(deFila))
   }
 
-  const filas = []
-  for (let desde = 0; ; desde += TAMANO_PAGINA) {
-    let consulta = supabase
+  const { inicio, fin } = primerDiaDelMes(mes)
+
+  // Con cita: se filtra por la fecha de la sesión. `citas!inner` hace que
+  // el filtro sobre la tabla incrustada descarte la factura entera.
+  const consultaSesion = ejecutar(
+    supabase
+      .from('facturas')
+      .select(COLUMNAS.replace('cita:citas (', 'cita:citas!inner('))
+      .gte('cita.fecha_hora', inicio.toISOString())
+      .lt('cita.fecha_hora', fin.toISOString())
+      .order('fecha_emision', { ascending: false }),
+    'cargar las facturas del mes',
+  )
+
+  // Sin cita (manuales): por fecha de emisión.
+  const consultaSinCita = ejecutar(
+    supabase
       .from('facturas')
       .select(COLUMNAS)
-      .order('fecha_emision', { ascending: false })
-      .order('numero_factura', { ascending: false })
-      .range(desde, desde + TAMANO_PAGINA - 1)
-    if (rango) {
-      consulta = consulta
-        .gte('fecha_emision', rango.desde)
-        .lt('fecha_emision', rango.hasta)
-    }
+      .is('cita_id', null)
+      .gte('fecha_emision', aClave(inicio))
+      .lt('fecha_emision', aClave(fin))
+      .order('fecha_emision', { ascending: false }),
+    'cargar las facturas del mes',
+  )
 
-    const { data, error } = await ejecutar(consulta, 'cargar las facturas')
-    if (error) return { data: null, error }
-    filas.push(...data)
-    if (data.length < TAMANO_PAGINA) break
-  }
+  const [rSesion, rSinCita] = await Promise.all([consultaSesion, consultaSinCita])
+  if (rSesion.error) return rSesion
+  if (rSinCita.error) return rSinCita
+
+  const vistos = new Set()
+  const filas = [...rSesion.data, ...rSinCita.data].filter((f) => {
+    if (vistos.has(f.id)) return false
+    vistos.add(f.id)
+    return true
+  })
   return exito(filas.map(deFila))
 }
 
 /**
- * Los meses ('YYYY-MM') que tienen alguna factura, de reciente a antiguo.
- * Sólo trae la columna de fecha, sin joins: alimenta el desplegable de
- * meses de la pantalla de facturación sin cargar las facturas enteras.
+ * Los meses ('YYYY-MM') que tienen alguna factura, de reciente a antiguo,
+ * por mes de la SESIÓN. Trae sólo dos fechas por fila, sin el resto de
+ * columnas ni los joins pesados: alimenta el desplegable de la pantalla
+ * de facturación sin cargar las facturas enteras.
  */
 export async function getMesesConFacturas() {
   const meses = new Set()
@@ -202,13 +244,13 @@ export async function getMesesConFacturas() {
     const { data, error } = await ejecutar(
       supabase
         .from('facturas')
-        .select('fecha_emision')
+        .select('fecha_emision, cita:citas (fecha_hora)')
         .order('fecha_emision', { ascending: false })
         .range(desde, desde + TAMANO_PAGINA - 1),
       'cargar los meses con facturas',
     )
     if (error) return { data: null, error }
-    for (const f of data) meses.add(String(f.fecha_emision).slice(0, 7))
+    for (const f of data) meses.add(mesSesionDe(f))
     if (data.length < TAMANO_PAGINA) break
   }
   return exito([...meses].sort((a, b) => b.localeCompare(a)))
