@@ -77,7 +77,10 @@ function deFila(fila) {
     cuotaIrpf: Number(fila.cuota_irpf ?? 0),
     total: Number(fila.total_factura ?? fila.importe ?? 0),
     liquido: Number(fila.liquido ?? fila.importe ?? 0),
-    esManual: !fila.cita_id,
+    // Manual = creada con `crearFacturaManual`, que siempre pone concepto.
+    // No basta con `cita_id is null`: alguna factura importada tampoco
+    // tiene cita y no es una factura manual.
+    esManual: Boolean(fila.concepto),
     esEmpresa: (fila.paciente?.tipo_cliente ?? 'particular') === 'empresa',
     empresaRazonSocial: fila.paciente?.empresa_razon_social ?? '',
     empresaCif: fila.paciente?.empresa_cif ?? '',
