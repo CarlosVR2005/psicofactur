@@ -102,7 +102,7 @@ export default function RectificarModal({
           {verifactuActivo ? ', y menos si se ha enviado a Hacienda' : ''}. Lo que
           se hace es emitir <strong className="text-tinta">otra factura nueva</strong>{' '}
           que la sustituye. La {factura.numero} se quedará en la lista marcada
-          como anulada: no se borra, y eso es lo correcto.
+          como rectificada: no se borra, y eso es lo correcto.
         </p>
 
         <Campo

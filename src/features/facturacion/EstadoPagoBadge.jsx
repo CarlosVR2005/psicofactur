@@ -1,19 +1,20 @@
 import { Ban, Check, Clock3, FileText } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
 
-/* Borrador (gris) / Pagado (verde) / Pendiente (naranja) / Anulada (gris).
+/* Borrador (gris) / Pagado (verde) / Pendiente (naranja) / Descartada
+   (gris) / Rectificada (gris).
    Si se le pasa `alCambiar`, el badge es un interruptor: un toque marca
    la factura como cobrada. Sólo tiene sentido en una factura ya emitida:
-   un borrador no se cobra, y las anuladas no se tocan desde aquí.
+   un borrador no se cobra, y una descartada o rectificada no se toca.
 
-   Hay dos formas de estar anulada y no son lo mismo por dentro, aunque
-   se pinten igual: `cancelado` es «esta sesión no se cobra», y
-   `anulada` es «la sustituye una rectificativa». */
+   Dos estados distintos que se pintan igual: `cancelado` es un borrador
+   que se decidió NO facturar (nunca tuvo número), y `anulada` es una
+   factura emitida a la que sustituye una rectificativa. */
 const ESTADOS = {
   borrador: { tono: 'neutro', etiqueta: 'Borrador', icono: FileText },
   pagado: { tono: 'verde', etiqueta: 'Pagado', icono: Check },
   pendiente: { tono: 'ambar', etiqueta: 'Pendiente', icono: Clock3 },
-  cancelado: { tono: 'neutro', etiqueta: 'Anulada', icono: Ban },
+  cancelado: { tono: 'neutro', etiqueta: 'Descartada', icono: Ban },
   anulada: { tono: 'neutro', etiqueta: 'Rectificada', icono: Ban },
 }
 

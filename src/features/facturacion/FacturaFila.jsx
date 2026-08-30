@@ -16,8 +16,8 @@ import { euros } from '../../lib/formato'
 import { fechaNumerica } from '../../lib/fechas'
 
 /* Una factura de la lista: una sesión facturada.
-   El badge de estado es pulsable (cobrada / pendiente) y, mientras
-   sigue pendiente, se puede anular — las facturas no se borran. */
+   El badge de estado es pulsable (cobrada / pendiente). Un borrador que
+   no se va a facturar se descarta — no se borra, queda como descartada. */
 export default function FacturaFila({
   factura,
   verifactuActivo = false,
@@ -29,7 +29,8 @@ export default function FacturaFila({
   const [rectificando, setRectificando] = useState(false)
   const [editando, setEditando] = useState(false)
 
-  // 'cancelado' = no se cobra; 'anulada' = la sustituye una rectificativa
+  // 'cancelado' = borrador descartado (no se factura); 'anulada' = la
+  // sustituye una rectificativa. Las dos dejan la fila fuera de juego.
   const anulada = factura.estado === 'cancelado' || factura.estado === 'anulada'
 
   /* Se puede rectificar una factura que ya está cerrada y no anulada.
@@ -207,15 +208,17 @@ export default function FacturaFila({
           </button>
         )}
 
-        {/* Una vez registrada en Hacienda ya no se anula desde aquí: eso
-            dejaría la app diciendo una cosa y la AEAT otra. */}
+        {/* Descartar un borrador que no se va a facturar (sesión gratis,
+            un no-show, un dedazo). El cron crea un borrador por cada
+            sesión pasada, así que hace falta la vía de decir «esta no».
+            Una factura ya emitida no se descarta: para eso se rectifica. */}
         {factura.estado === 'pendiente' && !factura.emitida && (
           <button
             type="button"
             onClick={() => cambiar('cancelado')}
             disabled={trabajando}
-            title="Anular la factura (no se borra, queda anulada)"
-            aria-label="Anular la factura"
+            title="Descartar esta sesión: no se factura. No se borra, queda descartada."
+            aria-label="Descartar la factura"
             className="rounded-lg p-1.5 text-tinta-tenue transition-colors hover:bg-rojo-suave hover:text-rojo"
           >
             <Ban className="size-4" strokeWidth={2} />
