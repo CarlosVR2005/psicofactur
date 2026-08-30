@@ -165,13 +165,20 @@ export default function FacturacionPage() {
   }, [facturas, filtro, mesFiltro, busqueda])
 
   // Agrupadas por el mes de la SESIÓN (no el de emisión): es como se
-  // cuadra la contabilidad de la consulta.
+  // cuadra la contabilidad de la consulta. Los meses van de más reciente
+  // a más antiguo y, dentro de cada uno, las facturas por fecha de la
+  // sesión (la de emisión si no hay cita), también de nueva a antigua.
   const porMes = useMemo(() => {
+    const clave = (f) =>
+      `${f.fechaSesion ?? String(f.fechaEmision).slice(0, 10)}T${f.horaSesion ?? '00:00'}`
     const grupos = new Map()
     filtradas.forEach((f) => {
       if (!grupos.has(f.mesSesion)) grupos.set(f.mesSesion, [])
       grupos.get(f.mesSesion).push(f)
     })
+    for (const lista of grupos.values()) {
+      lista.sort((a, b) => clave(b).localeCompare(clave(a)))
+    }
     return [...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [filtradas])
 
