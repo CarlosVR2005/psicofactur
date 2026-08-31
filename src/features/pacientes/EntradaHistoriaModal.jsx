@@ -12,6 +12,7 @@ import {
 } from '../../services/historia'
 import { aClave, hoy } from '../../lib/fechas'
 import { tamanoArchivo } from '../../lib/formato'
+import { comprimirImagen } from '../../lib/imagen'
 
 /* ================================================================
    ALTA Y EDICIÓN de una entrada de la historia clínica
@@ -61,6 +62,7 @@ export default function EntradaHistoriaModal({
   const [nuevos, setNuevos] = useState([]) // File[] pendientes de subir
   const [aBorrar, setABorrar] = useState([]) // ids de adjuntos existentes a quitar
   const [guardando, setGuardando] = useState(false)
+  const [procesando, setProcesando] = useState(false) // reduciendo imágenes recién elegidas
   const [error, setError] = useState(null)
   const [fallos, setFallos] = useState([]) // nombres de documentos que no subieron
 
@@ -76,20 +78,28 @@ export default function EntradaHistoriaModal({
     setError(null)
     setFallos([])
     setGuardando(false)
+    setProcesando(false)
   }, [abierto, entrada])
 
   const adjuntosExistentes = entrada?.adjuntos ?? []
-  const puedeGuardar = titulo.trim() !== '' && fecha !== '' && !guardando
+  const puedeGuardar =
+    titulo.trim() !== '' && fecha !== '' && !guardando && !procesando
 
-  const anadirArchivos = (lista) => {
+  const anadirArchivos = async (lista) => {
+    setError(null)
+    setProcesando(true)
     const problemas = []
     const validos = []
-    for (const archivo of lista) {
+    for (const original of lista) {
+      // Las fotos grandes se reducen antes de nada, así el límite de
+      // 15 MB se comprueba ya sobre la versión ligera.
+      const archivo = await comprimirImagen(original)
       const problema = archivoAdmitido(archivo)
       if (problema) problemas.push(problema)
       else validos.push(archivo)
     }
-    setError(problemas.length ? { mensaje: problemas.join(' ') } : null)
+    setProcesando(false)
+    if (problemas.length) setError({ mensaje: problemas.join(' ') })
     if (validos.length) setNuevos((prev) => [...prev, ...validos])
   }
 
@@ -161,12 +171,16 @@ export default function EntradaHistoriaModal({
   return (
     <Modal
       abierto={abierto}
-      alCerrar={guardando ? () => {} : alCerrar}
+      alCerrar={guardando || procesando ? () => {} : alCerrar}
       titulo={esNueva ? 'Nueva entrada' : 'Editar entrada'}
       descripcion={paciente?.nombre}
       pie={
         <>
-          <Boton variante="secundario" onClick={alCerrar} disabled={guardando}>
+          <Boton
+            variante="secundario"
+            onClick={alCerrar}
+            disabled={guardando || procesando}
+          >
             Cancelar
           </Boton>
           <Boton onClick={guardar} disabled={!puedeGuardar}>
@@ -291,17 +305,26 @@ export default function EntradaHistoriaModal({
 
           <label
             className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-borde-fuerte bg-white px-4 py-2.5 text-sm font-medium text-tinta transition-colors hover:bg-crema ${
-              guardando ? 'pointer-events-none opacity-50' : ''
+              guardando || procesando ? 'pointer-events-none opacity-50' : ''
             }`}
           >
-            <Paperclip className="size-4" strokeWidth={2} />
-            Adjuntar documento
+            {procesando ? (
+              <>
+                <Loader2 className="size-4 animate-spin" strokeWidth={2.2} />
+                Reduciendo imágenes…
+              </>
+            ) : (
+              <>
+                <Paperclip className="size-4" strokeWidth={2} />
+                Adjuntar documento
+              </>
+            )}
             <input
               type="file"
               multiple
               accept={ACEPTA}
               className="hidden"
-              disabled={guardando}
+              disabled={guardando || procesando}
               onChange={(e) => {
                 const lista = Array.from(e.target.files ?? [])
                 e.target.value = ''
@@ -310,7 +333,8 @@ export default function EntradaHistoriaModal({
             />
           </label>
           <p className="mt-1.5 text-xs text-tinta-tenue">
-            PDF, imagen, Word o texto. Hasta 15 MB por documento.
+            PDF, imagen, Word o texto. Hasta 15 MB por documento. Las fotos
+            grandes se reducen al adjuntarlas.
           </p>
 
           {fallos.length > 0 && (
