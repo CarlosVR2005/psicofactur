@@ -244,11 +244,37 @@ async function intentarImportar(
   // Ya se miró este evento alguna vez (pendiente, ignorado o resuelto)
   const { data: yaVisto } = await admin
     .from('eventos_google_pendientes')
-    .select('id')
+    .select('id, estado')
     .eq('psicologa_id', psicologaId)
     .eq('google_event_id', evento.id)
     .maybeSingle()
-  if (yaVisto) return
+
+  if (yaVisto) {
+    /* «resuelto» quiere decir que se creó su cita y se enlazó al evento.
+       Si hemos llegado hasta aquí es que esa cita YA NO ESTÁ: se movió o
+       se recreó el evento en Google y la sincronización quitó la cita, o
+       se borró desde la app. Sin cita y con el evento dado por resuelto,
+       la cita quedaba invisible: ni en el calendario ni en la bandeja.
+       Se reabre para que ella la vuelva a asignar. */
+    if (yaVisto.estado === 'resuelto') {
+      const inicioReabre = new Date(evento.start.dateTime)
+      const finReabre = evento.end?.dateTime ? new Date(evento.end.dateTime) : null
+      const duracionReabre = finReabre
+        ? Math.max(5, Math.round((finReabre.getTime() - inicioReabre.getTime()) / 60000))
+        : 55
+      const { error } = await admin
+        .from('eventos_google_pendientes')
+        .update({
+          estado: 'pendiente',
+          inicio: inicioReabre.toISOString(),
+          duracion_minutos: duracionReabre,
+          titulo: String(evento.summary ?? '').trim() || '(sin título)',
+        })
+        .eq('id', yaVisto.id)
+      if (!error) resumen.pendientes++
+    }
+    return
+  }
 
   const inicio = new Date(evento.start.dateTime)
   const fin = evento.end?.dateTime ? new Date(evento.end.dateTime) : null
