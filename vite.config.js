@@ -8,7 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt', no 'autoUpdate': la recarga automática y silenciosa no
+      // siempre la pillaba el navegador (sobre todo la PWA instalada), y
+      // cuando lo hacía recargaba de golpe. Ahora `AvisoVersion` enseña
+      // un aviso con botón «Actualizar».
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       // Permite probar la instalación de la PWA también en `npm run dev`
       devOptions: { enabled: true },

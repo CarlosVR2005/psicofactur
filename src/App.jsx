@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProveedorAuth } from './store/AuthContext'
+import AvisoVersion from './components/ui/AvisoVersion'
 import RutaProtegida from './components/layout/RutaProtegida'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
@@ -47,6 +48,8 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+
+      <AvisoVersion />
     </ProveedorAuth>
   )
 }
