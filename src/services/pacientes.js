@@ -258,6 +258,67 @@ export async function eliminarPaciente(id) {
 }
 
 /* ================================================================
+   FUSIONAR FICHAS DUPLICADAS
+
+   Cuando la misma persona ha acabado con dos fichas (el nombre escrito
+   distinto), esto las junta en una: `destinoId` es la que se queda y
+   `origenIds` las que se absorben. Todo —citas, facturas, historia
+   clínica, lista de espera y consentimiento— se reengancha a la ficha
+   destino antes de borrar las de origen.
+
+   La regla de qué se puede tocar y qué no (una factura emitida no se
+   borra, un rol de consentimiento no se duplica) vive en la función
+   `fusionar_pacientes` de la base (migración 0031), no aquí: tiene que
+   ser atómica.
+
+   Igual que `eliminar_paciente`, la RPC no lanza excepción: devuelve
+   `{ fusionado: false, motivo }` cuando no procede.
+   ================================================================ */
+
+/**
+ * @param {string}   destinoId  la ficha que se queda
+ * @param {string[]} origenIds  las fichas que se absorben y se borran
+ * @returns {Promise<{ data: { citas, facturas, entradas, adjuntos, espera }|null, error: object|null }>}
+ */
+export async function fusionarPacientes(destinoId, origenIds) {
+  const origenes = [...new Set(origenIds)].filter((id) => id && id !== destinoId)
+  if (!destinoId || origenes.length === 0) {
+    return fallo(
+      new Error('sin fichas que fusionar'),
+      'fusionar las fichas',
+      'Elige la ficha que se queda y al menos otra distinta para fusionarla.',
+    )
+  }
+
+  const { data, error } = await ejecutar(
+    supabase.rpc('fusionar_pacientes', {
+      p_destino: destinoId,
+      p_origenes: origenes,
+    }),
+    'fusionar las fichas',
+  )
+  if (error) return { data: null, error }
+
+  if (!data?.fusionado) {
+    return fallo(
+      new Error(data?.motivo ?? 'desconocido'),
+      'fusionar las fichas',
+      data?.motivo === 'no_encontrado'
+        ? 'Una de las fichas ya no existe. Recarga la lista y vuelve a intentarlo.'
+        : 'No se han podido fusionar esas fichas. Recarga la lista y vuelve a intentarlo.',
+    )
+  }
+
+  return exito({
+    citas: data.citas ?? 0,
+    facturas: data.facturas ?? 0,
+    entradas: data.entradas ?? 0,
+    adjuntos: data.adjuntos ?? 0,
+    espera: data.espera ?? 0,
+  })
+}
+
+/* ================================================================
    IMPORTACIÓN EN LOTE
 
    Traer la lista de pacientes de otro programa. Son dos funciones

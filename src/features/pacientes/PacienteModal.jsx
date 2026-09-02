@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import Boton from '../../components/ui/Boton'
 import AvisoError from '../../components/ui/AvisoError'
@@ -7,7 +7,7 @@ import { Campo, Entrada, AreaTexto } from '../../components/ui/Campo'
 import { actualizarPaciente, crearPaciente } from '../../services/pacientes'
 import { aClave, hoy } from '../../lib/fechas'
 import { esMenorDeEdad, progenitoresDe } from '../../lib/menores'
-import { errorDeNif } from '../../lib/nif'
+import { errorDeNif, normalizarNif } from '../../lib/nif'
 
 const TIPOS_CLIENTE = [
   { id: 'particular', etiqueta: 'Particular' },
@@ -38,10 +38,11 @@ const VACIO = {
 }
 
 /**
- * @param {object}   props.paciente   si viene, se edita; si no, se crea
- * @param {function} props.alGuardar  recibe el paciente ya guardado en Supabase
+ * @param {object}   props.paciente        si viene, se edita; si no, se crea
+ * @param {function} props.alGuardar       recibe el paciente ya guardado en Supabase
+ * @param {object[]} [props.otrosPacientes] lista para avisar si el DNI ya es de otra ficha
  */
-export default function PacienteModal({ abierto, alCerrar, paciente, alGuardar }) {
+export default function PacienteModal({ abierto, alCerrar, paciente, alGuardar, otrosPacientes }) {
   const [datos, setDatos] = useState(VACIO)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
@@ -54,6 +55,18 @@ export default function PacienteModal({ abierto, alCerrar, paciente, alGuardar }
 
   const cambiar = (campo) => (e) =>
     setDatos((d) => ({ ...d, [campo]: e.target.value }))
+
+  /* ¿El DNI escrito ya es de otra ficha? Avisa, no bloquea: puede ser
+     justo el caso que hay que fusionar, o un dedazo a tiempo. */
+  const dniRepetido = useMemo(() => {
+    const dni = normalizarNif(datos.dni || '')
+    if (!dni || !otrosPacientes) return null
+    return (
+      otrosPacientes.find(
+        (p) => p.id !== paciente?.id && p.dni && normalizarNif(p.dni) === dni,
+      ) ?? null
+    )
+  }, [datos.dni, otrosPacientes, paciente?.id])
 
   const esEmpresa = datos.tipoCliente === 'empresa'
   const problemaCif = esEmpresa ? errorDeNif(datos.empresaCif) : null
@@ -186,7 +199,17 @@ export default function PacienteModal({ abierto, alCerrar, paciente, alGuardar }
               value={datos.dni}
               onChange={cambiar('dni')}
               placeholder="12345678A"
+              aria-invalid={Boolean(dniRepetido)}
+              className={
+                dniRepetido ? 'border-ambar focus:border-ambar focus:ring-ambar/20' : ''
+              }
             />
+            {dniRepetido && (
+              <span className="mt-1 block text-xs text-ambar">
+                Ese DNI ya es de la ficha de «{dniRepetido.nombre}». Si es la misma
+                persona, guárdala y fusiónalas desde la lista de pacientes.
+              </span>
+            )}
           </Campo>
           <Campo etiqueta="Teléfono">
             <Entrada

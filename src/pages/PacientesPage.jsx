@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowDownUp, Plus, UserRoundSearch, Users } from 'lucide-react'
+import { ArrowDownUp, GitMerge, Plus, UserRoundSearch, Users } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
 import Card from '../components/ui/Card'
 import Buscador from '../components/ui/Buscador'
@@ -13,9 +13,20 @@ import { EsqueletoLista } from '../components/ui/Cargando'
 import PacienteFila from '../features/pacientes/PacienteFila'
 import PacienteModal from '../features/pacientes/PacienteModal'
 import ImportarExportarModal from '../features/pacientes/ImportarExportarModal'
+import FusionarPacientesModal from '../features/pacientes/FusionarPacientesModal'
 import { usePacientes } from '../hooks/usePacientes'
 import { normalizar } from '../lib/formato'
 import { esMenorDeEdad } from '../lib/menores'
+import { gruposDuplicados } from '../lib/duplicados'
+
+/* Firma estable de un grupo de duplicados: sus ids ordenados. Sirve
+   para recordar, sólo mientras dura la sesión, los grupos que ella ha
+   marcado como «no son la misma persona». */
+const firmaGrupo = (grupo) =>
+  grupo.fichas
+    .map((f) => f.id)
+    .sort()
+    .join('|')
 
 const VISTAS = [
   { id: 'activos', etiqueta: 'Activos' },
@@ -39,6 +50,17 @@ export default function PacientesPage() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [traspasoAbierto, setTraspasoAbierto] = useState(false)
   const [aviso, setAviso] = useState(null)
+
+  /* Fichas que parecen la misma persona. Se calcula sobre la lista ya
+     cargada, así que no cuesta ninguna consulta. Los grupos que ella
+     descarta se recuerdan sólo hasta que recargue la página. */
+  const [descartados, setDescartados] = useState(() => new Set())
+  const [grupoFusion, setGrupoFusion] = useState(null)
+
+  const duplicados = useMemo(() => {
+    if (pacientes.length < 2) return []
+    return gruposDuplicados(pacientes).filter((g) => !descartados.has(firmaGrupo(g)))
+  }, [pacientes, descartados])
 
   /* Al volver de borrar una ficha, la pantalla de detalle deja el aviso
      en `location.state`. Se recoge una vez y se limpia del historial
@@ -127,6 +149,23 @@ export default function PacientesPage() {
 
       <AvisoError error={error} alReintentar={recargar} className="mb-4" />
 
+      {duplicados.length > 0 && !cargando && (
+        <button
+          type="button"
+          onClick={() => setGrupoFusion(duplicados[0])}
+          className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-ambar/30 bg-ambar-suave px-4 py-3 text-left transition-colors hover:bg-ambar-suave/70"
+        >
+          <GitMerge className="size-5 shrink-0 text-ambar" strokeWidth={2} />
+          <span className="min-w-0 flex-1 text-sm text-tinta">
+            {duplicados.length === 1
+              ? `${duplicados[0].fichas.length} fichas parecen la misma persona.`
+              : `${duplicados.length} grupos de fichas parecen repetidas.`}{' '}
+            <span className="text-tinta-suave">Revísalas y fusiónalas si lo son.</span>
+          </span>
+          <span className="shrink-0 text-sm font-medium text-marca-700">Revisar</span>
+        </button>
+      )}
+
       {cargando ? (
         <EsqueletoLista filas={6} />
       ) : resultados.length === 0 ? (
@@ -184,6 +223,7 @@ export default function PacientesPage() {
         abierto={modalAbierto}
         alCerrar={() => setModalAbierto(false)}
         alGuardar={aplicarCambio}
+        otrosPacientes={pacientes}
       />
 
       <ImportarExportarModal
@@ -191,6 +231,34 @@ export default function PacientesPage() {
         alCerrar={() => setTraspasoAbierto(false)}
         alRecargar={recargar}
         alAvisar={setAviso}
+      />
+
+      <FusionarPacientesModal
+        abierto={Boolean(grupoFusion)}
+        grupo={grupoFusion}
+        alCerrar={() => setGrupoFusion(null)}
+        alDescartar={(grupo) =>
+          setDescartados((s) => new Set(s).add(firmaGrupo(grupo)))
+        }
+        alFusionado={({ destino, resumen }) => {
+          setGrupoFusion(null)
+          const movido = []
+          if (resumen.citas) movido.push(`${resumen.citas} ${resumen.citas === 1 ? 'cita' : 'citas'}`)
+          if (resumen.facturas) {
+            movido.push(`${resumen.facturas} ${resumen.facturas === 1 ? 'factura' : 'facturas'}`)
+          }
+          if (resumen.entradas) {
+            movido.push(
+              `${resumen.entradas} ${resumen.entradas === 1 ? 'entrada de la historia' : 'entradas de la historia'}`,
+            )
+          }
+          setAviso({
+            tipo: 'exito',
+            titulo: `Fichas fusionadas en «${destino?.nombre}»`,
+            detalle: movido.length > 0 ? `Se ${movido.length === 1 ? 'ha movido' : 'han movido'} ${movido.join(', ')}.` : undefined,
+          })
+          recargar()
+        }}
       />
 
       <Aviso aviso={aviso} alCerrar={() => setAviso(null)} />
