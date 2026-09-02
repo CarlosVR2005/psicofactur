@@ -78,11 +78,14 @@ src/
 │   ├─ pacientesCsv.js    traspaso de pacientes: abrir el archivo venga
 │   │                     como venga, alias de columnas, fechas y
 │   │                     teléfonos de cualquier programa, duplicados
-│   └─ formato.js         €, teléfono, DNI, búsqueda sin tildes
+│   ├─ formato.js         €, teléfono, DNI, búsqueda sin tildes
+│   └─ duplicados.js      fichas que parecen la misma persona (DNI,
+│                         teléfono o nombre parecido), para fusionarlas
 ├─ services/              ACCESO A DATOS (lo único que habla con Supabase)
 │   ├─ base.js            patrón { data, error } y traducción de errores
 │   ├─ pacientes.js       getPacientes · getPaciente · crearPaciente ·
 │   │                     actualizarPaciente · cambiarActivo ·
+│   │                     eliminarPaciente · fusionarPacientes ·
 │   │                     crearPacientesEnLote · completarPacientesEnLote
 │   ├─ citas.js           getCitas · getCitasDePaciente · crearCita ·
 │   │                     actualizarCita · eliminarCita · suscribirCitas
@@ -117,8 +120,8 @@ src/
 │                         RutaProtegida
 ├─ features/
 │   ├─ pacientes/         PacienteCard · PacienteModal · DatoFicha ·
-│   │                     ImportarExportarModal · ConsentimientoCard ·
-│   │                     ConsentimientoBadge · FirmaModal
+│   │                     ImportarExportarModal · FusionarPacientesModal ·
+│   │                     ConsentimientoCard · ConsentimientoBadge · FirmaModal
 │   ├─ consentimiento/    LienzoFirma (el <canvas>) · TextoLegal
 │   │                     (lo que ve el PACIENTE, sin sesión)
 │   ├─ agenda/            VistaSemana · VistaMes · CitaChip · CitaModal ·
@@ -792,6 +795,61 @@ entrar sin tocar nada**. Lleva sólo las
 fichas (no las citas, ni las facturas, ni los consentimientos firmados) y son
 datos de salud identificables: la propia ventana lo recuerda.
 
+## Fusionar fichas duplicadas
+
+Cuando el nombre se teclea distinto —«Mª Ángeles Ruiz» y «Ma Angeles Ruiz»— la
+misma persona acaba con dos fichas, y cada una se lleva un trozo del histórico:
+unas citas en una, las facturas en la otra, el consentimiento firmado en la que
+ya no se usa.
+
+**Detección** (`src/lib/duplicados.js`, sin React). Sobre la lista ya cargada,
+así que no cuesta ninguna consulta. Dos fichas son la misma persona por, de más
+a menos fiable: **mismo DNI** (normalizado), **mismo teléfono** (sin prefijo ni
+espacios) o **nombre parecido** (tolera dedazos, letra bailada e iniciales;
+«Mª»→«ma»). El emparejado es transitivo: tres altas de la misma persona salen
+como un grupo. Dos frenos: un **DNI distinto** confirmado nunca fusiona, y una
+**fecha de nacimiento distinta** descarta el parentesco por teléfono o nombre
+(dos hermanos con el móvil de la madre) —pero NO tumba un DNI que coincide, que
+ahí lo más probable es un dedazo en la fecha—. Es el mismo criterio que ya usa
+la importación (`analizarImportacion` en `lib/pacientesCsv.js`).
+
+**Nunca se fusiona sola.** En _Pacientes_ sale un aviso —«2 fichas parecen la
+misma persona»— que abre `FusionarPacientesModal`. Ahí el grupo detectado es
+sólo una sugerencia: ella **marca con casilla cuáles participan** de verdad
+(puede dejar fuera un falso positivo), **elige cuál se queda** —su nombre y sus
+datos son los que mandan; por defecto se marca la de más histórico— y ve qué
+huecos se rellenarán y qué se moverá antes de confirmar. También puede
+descartar el grupo entero («no son la misma persona»), sólo por esa sesión.
+
+**La fusión** la hace la función `fusionar_pacientes(p_destino, p_origenes[])`
+(migración 0031), en una sola transacción y con `security invoker` (el RLS de
+cada tabla sigue mandando). Rellena los huecos de la ficha destino con lo de
+las de origen —sólo huecos, nunca pisa lo escrito; misma lista de campos que
+`camposQueCompletan`, hay que mantenerlas a la par—, reengancha a la destino
+las siete columnas que apuntan a `pacientes.id` (`citas.paciente_id` +
+`acompanante_id`, `facturas`, `historia_entradas`, `historia_adjuntos`,
+`lista_espera`, `consentimiento_firmantes`) y borra las de origen. Detalles que
+no conviene perder:
+
+- **Una factura emitida no se toca:** sólo cambia el enlace para navegar. El
+  destinatario va congelado en `facturas.destinatario_*` (migración 0024) y el
+  trigger `asignar_numero_factura` sale por la primera línea si `emitida_at` ya
+  tiene valor, así que no se renumera nada.
+- **Tres choques con índices únicos, resueltos dentro:**
+  `consentimiento_firmantes` tiene `unique(paciente_id, rol)` → se deja una fila
+  por rol, gana la FIRMADA (una firma real no se pierde nunca);
+  `lista_espera` tiene un único parcial para los estados activos → se deja la
+  más antigua y se borran las demás; `citas` tiene `check(acompanante_id <>
+  paciente_id)` → se quita el acompañante a las citas que quedarían apuntando a
+  sí mismas.
+- **Los ficheros del bucket `historia` no se mueven:** su ruta lleva dentro el
+  `paciente_id` viejo, pero es sólo una clave de Storage; la fila de
+  `historia_adjuntos` sí queda apuntando a la ficha destino, que es por donde
+  se listan y se borran.
+
+Además, al crear un paciente, si el DNI ya es de otra ficha se avisa ahí mismo
+(no bloquea el guardado): corta el siguiente duplicado donde nace.
+
 ## Capa de servicios
 
 Los componentes **nunca** llaman a Supabase: llaman a `src/services/*`. Cada
@@ -813,7 +871,11 @@ La base de datos habla en `snake_case` y la interfaz en `camelCase`; la
 traducción vive dentro de cada servicio (`deFila` / `aFila`) y no sale de ahí.
 
 Los pacientes **no se borran**: se archivan (`activo = false`), para no perder
-su histórico de citas y facturas.
+su histórico de citas y facturas. Las dos excepciones tienen su propia función
+en la base, atómica y con el motivo devuelto en vez de excepción:
+`eliminar_paciente` (migración 0020, se niega si hay facturas) para la ficha
+basura, y `fusionar_pacientes` (migración 0031) para juntar dos fichas de la
+misma persona sin perder nada del histórico — ver «Fusionar fichas duplicadas».
 
 ## Decisiones que conviene recordar
 
