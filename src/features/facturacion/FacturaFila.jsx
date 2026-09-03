@@ -168,15 +168,13 @@ export default function FacturaFila({
           alFallar={alFallar}
         />
 
-        {/* Forma de cobro: dato de contabilidad menor, se esconde en el móvil. */}
-        <span className="hidden sm:block">
-          <MetodoPagoBoton
-            factura={factura}
-            alCambiar={alCambiar}
-            alFallar={alFallar}
-            disabled={anulada || trabajando}
-          />
-        </span>
+        {/* Forma de cobro: chip con icono y texto, bien visible. */}
+        <MetodoPagoBoton
+          factura={factura}
+          alCambiar={alCambiar}
+          alFallar={alFallar}
+          disabled={anulada || trabajando}
+        />
 
         {/* Editar (sólo borrador): en cuanto sale hacia Hacienda lo que
             queda es rectificarla. */}
