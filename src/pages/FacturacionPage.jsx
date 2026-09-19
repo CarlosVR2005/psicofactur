@@ -194,16 +194,19 @@ export default function FacturacionPage() {
   // cuadra la contabilidad de la consulta. Los meses van de más reciente
   // a más antiguo y, dentro de cada uno, las facturas por fecha de la
   // sesión (la de emisión si no hay cita), también de nueva a antigua.
+  // Las descartadas (sesiones canceladas que no se facturan) van siempre
+  // al final de su mes, para que no tapen las facturas que sí cuentan.
   const porMes = useMemo(() => {
     const clave = (f) =>
       `${f.fechaSesion ?? String(f.fechaEmision).slice(0, 10)}T${f.horaSesion ?? '00:00'}`
+    const alFinal = (f) => (f.estado === 'cancelado' ? 1 : 0)
     const grupos = new Map()
     filtradas.forEach((f) => {
       if (!grupos.has(f.mesSesion)) grupos.set(f.mesSesion, [])
       grupos.get(f.mesSesion).push(f)
     })
     for (const lista of grupos.values()) {
-      lista.sort((a, b) => clave(b).localeCompare(clave(a)))
+      lista.sort((a, b) => alFinal(a) - alFinal(b) || clave(b).localeCompare(clave(a)))
     }
     return [...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [filtradas])
