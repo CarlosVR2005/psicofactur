@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FilePlus2, ReceiptText } from 'lucide-react'
+import { Banknote, CreditCard, FilePlus2, ReceiptText } from 'lucide-react'
 import Cabecera from '../components/layout/Cabecera'
+import Badge from '../components/ui/Badge'
 import Card from '../components/ui/Card'
 import Boton from '../components/ui/Boton'
 import Buscador from '../components/ui/Buscador'
@@ -16,7 +17,7 @@ import { useFacturas } from '../hooks/useFacturas'
 import { facturarSesionesPendientes, getMesesConFacturas } from '../services/facturas'
 import { getDatosFiscales, sincronizarEstadoFacturas } from '../services/verifacti'
 import { euros, normalizar } from '../lib/formato'
-import { aClave, hoy, MESES } from '../lib/fechas'
+import { aClave, etiquetaDia, hoy, MESES } from '../lib/fechas'
 
 const FILTROS = [
   { id: 'todas', etiqueta: 'Todas' },
@@ -24,10 +25,23 @@ const FILTROS = [
   { id: 'pagado', etiqueta: 'Cobradas' },
 ]
 
+const VISTAS = [
+  { id: 'mes', etiqueta: 'Por meses' },
+  { id: 'dia', etiqueta: 'Por días' },
+]
+
 function etiquetaMes(clave) {
   const [ano, mes] = clave.split('-')
   const nombre = MESES[Number(mes) - 1]
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${ano}`
+}
+
+/* «Hoy», «Ayer» o «jueves, 14 de mayo»; con el año cuando la lista
+   mezcla varios meses, para que no haya dos «14 de mayo» sin distinguir. */
+function etiquetaDiaFactura(clave, conAno) {
+  const corta = etiquetaDia(clave)
+  const esRelativa = corta === 'Hoy' || corta === 'Ayer' || corta === 'Mañana'
+  return conAno && !esRelativa ? `${corta} de ${clave.slice(0, 4)}` : corta
 }
 
 const MES_EN_CURSO = aClave(hoy()).slice(0, 7)
@@ -43,6 +57,7 @@ export default function FacturacionPage() {
   )
 
   const [filtro, setFiltro] = useState('todas')
+  const [vista, setVista] = useState('mes')
   const [busqueda, setBusqueda] = useState('')
   const [aviso, setAviso] = useState(null)
   const [modalManual, setModalManual] = useState(false)
@@ -168,7 +183,17 @@ export default function FacturacionPage() {
     const cobrado = delMes
       .filter((f) => f.estado === 'pagado')
       .reduce((s, f) => s + f.importe, 0)
-    return { total, cobrado, pendiente: total - cobrado, numero: delMes.length }
+    // Lo facturado según la forma de cobro apuntada en cada factura
+    const deMetodo = (metodo) =>
+      delMes.filter((f) => f.metodoPago === metodo).reduce((s, f) => s + f.importe, 0)
+    return {
+      total,
+      cobrado,
+      pendiente: total - cobrado,
+      numero: delMes.length,
+      efectivo: deMetodo('efectivo'),
+      tarjeta: deMetodo('tarjeta'),
+    }
   }, [facturas, mesResumen])
 
   // Opciones del desplegable: los meses con factura + el que esté
@@ -195,21 +220,31 @@ export default function FacturacionPage() {
   // a más antiguo y, dentro de cada uno, las facturas por fecha de la
   // sesión (la de emisión si no hay cita), también de nueva a antigua.
   // Las descartadas (sesiones canceladas que no se facturan) van siempre
-  // al final de su mes, para que no tapen las facturas que sí cuentan.
-  const porMes = useMemo(() => {
-    const clave = (f) =>
-      `${f.fechaSesion ?? String(f.fechaEmision).slice(0, 10)}T${f.horaSesion ?? '00:00'}`
+  // al final de su grupo, para que no tapen las facturas que sí cuentan.
+  //
+  // En la vista «Por días» el grupo es el día de la sesión: los días van
+  // también de más reciente a más antiguo, pero dentro de cada día las
+  // sesiones van por hora, de la mañana a la tarde.
+  const porGrupo = useMemo(() => {
+    const dia = (f) => f.fechaSesion ?? String(f.fechaEmision).slice(0, 10)
+    const clave = (f) => `${dia(f)}T${f.horaSesion ?? '00:00'}`
     const alFinal = (f) => (f.estado === 'cancelado' ? 1 : 0)
+    const porDias = vista === 'dia'
     const grupos = new Map()
     filtradas.forEach((f) => {
-      if (!grupos.has(f.mesSesion)) grupos.set(f.mesSesion, [])
-      grupos.get(f.mesSesion).push(f)
+      const g = porDias ? dia(f) : f.mesSesion
+      if (!grupos.has(g)) grupos.set(g, [])
+      grupos.get(g).push(f)
     })
     for (const lista of grupos.values()) {
-      lista.sort((a, b) => alFinal(a) - alFinal(b) || clave(b).localeCompare(clave(a)))
+      lista.sort(
+        (a, b) =>
+          alFinal(a) - alFinal(b) ||
+          (porDias ? clave(a).localeCompare(clave(b)) : clave(b).localeCompare(clave(a))),
+      )
     }
     return [...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0]))
-  }, [filtradas])
+  }, [filtradas, vista])
 
   /* Rectificar crea una factura NUEVA y anula la original: cambian dos
      filas a la vez, así que no vale con retocar una. Se recarga. */
@@ -245,8 +280,20 @@ export default function FacturacionPage() {
           </dl>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Lo facturado del mes por forma de cobro. Mismos iconos y colores
+            que el chip de cada factura, para que se reconozcan. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Badge tono="verde" icono={Banknote}>
+            Efectivo · {euros(resumen.efectivo)}
+          </Badge>
+          <Badge tono="azul" icono={CreditCard}>
+            Tarjeta · {euros(resumen.tarjeta)}
+          </Badge>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Segmentado opciones={FILTROS} valor={filtro} alCambiar={setFiltro} />
+          <Segmentado opciones={VISTAS} valor={vista} alCambiar={setVista} />
           <Seleccion
             value={mesFiltro}
             onChange={(e) => setMesFiltro(e.target.value)}
@@ -260,7 +307,7 @@ export default function FacturacionPage() {
               </option>
             ))}
           </Seleccion>
-          <div className="flex-1">
+          <div className="flex-1 sm:min-w-[14rem]">
             <Buscador
               valor={busqueda}
               alCambiar={setBusqueda}
@@ -287,7 +334,7 @@ export default function FacturacionPage() {
 
       {cargando ? (
         <EsqueletoLista filas={5} />
-      ) : porMes.length === 0 ? (
+      ) : porGrupo.length === 0 ? (
         mesesCargados && mesesDisponibles.length === 0 ? (
           <EstadoVacio
             icono={ReceiptText}
@@ -310,16 +357,18 @@ export default function FacturacionPage() {
         )
       ) : (
         <div className="space-y-6">
-          {porMes.map(([mes, lista]) => {
+          {porGrupo.map(([grupo, lista]) => {
             const total = lista
               .filter((f) => f.estado !== 'cancelado')
               .reduce((s, f) => s + f.importe, 0)
             const pendientes = lista.filter((f) => f.estado === 'pendiente').length
             return (
-              <section key={mes}>
+              <section key={grupo}>
                 <div className="mb-2 flex items-baseline justify-between px-1">
                   <h2 className="font-semibold text-tinta first-letter:uppercase">
-                    {etiquetaMes(mes)}
+                    {vista === 'dia'
+                      ? etiquetaDiaFactura(grupo, mesFiltro === 'todos')
+                      : etiquetaMes(grupo)}
                   </h2>
                   <p className="text-sm text-tinta-suave">
                     {euros(total)}

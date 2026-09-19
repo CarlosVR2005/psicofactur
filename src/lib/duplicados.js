@@ -172,15 +172,37 @@ export function porQueSonLaMisma(a, b) {
    ---------------------------------------------------------------- */
 
 /**
+ * Clave de una pareja de fichas, igual venga como (A, B) o como (B, A).
+ * Es la misma ordenación que exige la tabla `pacientes_no_duplicados`.
+ */
+export function clavePareja(idA, idB) {
+  return idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`
+}
+
+/** Todas las parejas de un grupo: 3 fichas dan 3 parejas. */
+export function parejasDeGrupo(grupo) {
+  const ids = grupo.fichas.map((f) => f.id)
+  const parejas = []
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) {
+      parejas.push(ids[i] < ids[j] ? [ids[i], ids[j]] : [ids[j], ids[i]])
+    }
+  }
+  return parejas
+}
+
+/**
  * Recorre la lista y devuelve los grupos de fichas que parecen la misma
  * persona. El emparejamiento es transitivo: si A va con B y B con C, los
  * tres son un grupo (típico de tres altas de la misma persona).
  *
  * @param {Array} pacientes  lista de fichas (objetos de `deFila`)
+ * @param {Set<string>} [distintas]  parejas (`clavePareja`) que ella ya ha
+ *   dicho que son personas distintas: no se emparejan aunque se parezcan.
  * @returns {Array<{ fichas: object[], motivo: string, confianza: string }>}
  *   `motivo` y `confianza` son los de la señal más fuerte del grupo.
  */
-export function gruposDuplicados(pacientes) {
+export function gruposDuplicados(pacientes, distintas = new Set()) {
   const n = pacientes.length
   const padre = Array.from({ length: n }, (_, i) => i)
   const raiz = (i) => (padre[i] === i ? i : (padre[i] = raiz(padre[i])))
@@ -197,6 +219,7 @@ export function gruposDuplicados(pacientes) {
 
   for (let i = 0; i < n; i += 1) {
     for (let j = i + 1; j < n; j += 1) {
+      if (distintas.has(clavePareja(pacientes[i].id, pacientes[j].id))) continue
       const motivo = porQueSonLaMisma(pacientes[i], pacientes[j])
       if (!motivo) continue
       const ri = raiz(i)

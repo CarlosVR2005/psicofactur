@@ -319,6 +319,50 @@ export async function fusionarPacientes(destinoId, origenIds) {
 }
 
 /* ================================================================
+   PAREJAS QUE NO SON LA MISMA PERSONA
+
+   Cuando ella dice «no son la misma persona» en el aviso de duplicados,
+   la pareja se guarda en `pacientes_no_duplicados` (migración 0032) y la
+   detección deja de proponerla. Se guardan parejas, no grupos: con un
+   grupo de tres fichas son tres parejas.
+   ================================================================ */
+
+/** Las parejas ya descartadas, como lista de `[idA, idB]` (idA < idB). */
+export async function getParesNoDuplicados() {
+  const { data, error } = await ejecutar(
+    supabase.from('pacientes_no_duplicados').select('paciente_a, paciente_b'),
+    'cargar las fichas descartadas como duplicadas',
+  )
+  if (error) return { data: null, error }
+  return exito(data.map((f) => [f.paciente_a, f.paciente_b]))
+}
+
+/**
+ * Guarda parejas de fichas como «personas distintas». Repetir una pareja
+ * que ya estaba no da error.
+ *
+ * @param {Array<[string, string]>} parejas  cada una con el id menor primero
+ */
+export async function descartarParejasDuplicadas(parejas) {
+  if (parejas.length === 0) return exito(0)
+
+  const psicologaId = await psicologaActualId()
+  if (!psicologaId) {
+    return fallo(new Error('sin sesión'), 'guardar el descarte: la sesión ha caducado')
+  }
+
+  const { error } = await ejecutar(
+    supabase.from('pacientes_no_duplicados').upsert(
+      parejas.map(([a, b]) => ({ paciente_a: a, paciente_b: b, psicologa_id: psicologaId })),
+      { onConflict: 'paciente_a,paciente_b', ignoreDuplicates: true },
+    ),
+    'guardar que esas fichas no son la misma persona',
+  )
+  if (error) return { data: null, error }
+  return exito(parejas.length)
+}
+
+/* ================================================================
    IMPORTACIÓN EN LOTE
 
    Traer la lista de pacientes de otro programa. Son dos funciones

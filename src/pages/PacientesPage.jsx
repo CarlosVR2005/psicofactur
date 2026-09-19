@@ -17,16 +17,8 @@ import FusionarPacientesModal from '../features/pacientes/FusionarPacientesModal
 import { usePacientes } from '../hooks/usePacientes'
 import { normalizar } from '../lib/formato'
 import { esMenorDeEdad } from '../lib/menores'
-import { gruposDuplicados } from '../lib/duplicados'
-
-/* Firma estable de un grupo de duplicados: sus ids ordenados. Sirve
-   para recordar, sólo mientras dura la sesión, los grupos que ella ha
-   marcado como «no son la misma persona». */
-const firmaGrupo = (grupo) =>
-  grupo.fichas
-    .map((f) => f.id)
-    .sort()
-    .join('|')
+import { clavePareja, gruposDuplicados, parejasDeGrupo } from '../lib/duplicados'
+import { descartarParejasDuplicadas, getParesNoDuplicados } from '../services/pacientes'
 
 const VISTAS = [
   { id: 'activos', etiqueta: 'Activos' },
@@ -52,15 +44,54 @@ export default function PacientesPage() {
   const [aviso, setAviso] = useState(null)
 
   /* Fichas que parecen la misma persona. Se calcula sobre la lista ya
-     cargada, así que no cuesta ninguna consulta. Los grupos que ella
-     descarta se recuerdan sólo hasta que recargue la página. */
-  const [descartados, setDescartados] = useState(() => new Set())
+     cargada. Las parejas que ella ha dicho que son personas distintas
+     se guardan en la base (`pacientes_no_duplicados`) y se cargan aquí
+     una vez: la detección se las salta y no vuelven a salir. */
+  const [distintas, setDistintas] = useState(() => new Set())
   const [grupoFusion, setGrupoFusion] = useState(null)
+
+  useEffect(() => {
+    let vivo = true
+    getParesNoDuplicados().then(({ data }) => {
+      if (!vivo || !data) return
+      setDistintas((previas) => {
+        const s = new Set(previas)
+        data.forEach(([a, b]) => s.add(clavePareja(a, b)))
+        return s
+      })
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   const duplicados = useMemo(() => {
     if (pacientes.length < 2) return []
-    return gruposDuplicados(pacientes).filter((g) => !descartados.has(firmaGrupo(g)))
-  }, [pacientes, descartados])
+    return gruposDuplicados(pacientes, distintas)
+  }, [pacientes, distintas])
+
+  /* «No son la misma persona»: se apunta al momento, para que el aviso
+     desaparezca sin esperar, y se guarda. Si el guardado falla se deshace
+     y se avisa, porque si no volvería a salir en la próxima visita sin
+     que ella supiera por qué. */
+  const descartarGrupo = async (grupo) => {
+    const parejas = parejasDeGrupo(grupo)
+    const claves = parejas.map(([a, b]) => clavePareja(a, b))
+    setDistintas((previas) => new Set([...previas, ...claves]))
+
+    const { error: fallo } = await descartarParejasDuplicadas(parejas)
+    if (!fallo) return
+    setDistintas((previas) => {
+      const s = new Set(previas)
+      claves.forEach((c) => s.delete(c))
+      return s
+    })
+    setAviso({
+      tipo: 'error',
+      titulo: 'No se ha podido guardar que no son la misma persona',
+      detalle: fallo.mensaje,
+    })
+  }
 
   /* Al volver de borrar una ficha, la pantalla de detalle deja el aviso
      en `location.state`. Se recoge una vez y se limpia del historial
@@ -237,9 +268,7 @@ export default function PacientesPage() {
         abierto={Boolean(grupoFusion)}
         grupo={grupoFusion}
         alCerrar={() => setGrupoFusion(null)}
-        alDescartar={(grupo) =>
-          setDescartados((s) => new Set(s).add(firmaGrupo(grupo)))
-        }
+        alDescartar={descartarGrupo}
         alFusionado={({ destino, resumen }) => {
           setGrupoFusion(null)
           const movido = []
