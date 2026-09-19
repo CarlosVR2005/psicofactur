@@ -165,6 +165,23 @@ function mesSesionDe(fila) {
   return String(base).slice(0, 7)
 }
 
+/* Un borrador cuya sesión aún no ha llegado no pinta nada en la pantalla
+   de facturación. Los borradores los crea el cron sólo para sesiones ya
+   celebradas, así que uno de una cita futura es un resto: la cita se
+   movió a otro día después de crearse su borrador (típico al reagendar
+   desde Google Calendar). Cuando llegue su día, la fila reaparece sola.
+
+   El corte es el final de hoy, como en `getSesionesSinFacturar`: la
+   sesión de esta tarde sí se ve, la de mañana en adelante no. Una factura
+   ya emitida se enseña siempre, sea cual sea la fecha de su cita. */
+function esBorradorDeSesionFutura(fila) {
+  if (fila.emitida_at || fila.verifactu_id) return false
+  if (!fila.cita?.fecha_hora) return false
+  const finDeHoy = new Date()
+  finDeHoy.setHours(23, 59, 59, 999)
+  return new Date(fila.cita.fecha_hora) > finDeHoy
+}
+
 /**
  * Facturas de la más reciente a la más antigua.
  *
@@ -190,7 +207,7 @@ export async function getFacturas({ mes } = {}) {
       filas.push(...data)
       if (data.length < TAMANO_PAGINA) break
     }
-    return exito(filas.map(deFila))
+    return exito(filas.filter((f) => !esBorradorDeSesionFutura(f)).map(deFila))
   }
 
   const { inicio, fin } = primerDiaDelMes(mes)
@@ -227,7 +244,7 @@ export async function getFacturas({ mes } = {}) {
   const filas = [...rSesion.data, ...rSinCita.data].filter((f) => {
     if (vistos.has(f.id)) return false
     vistos.add(f.id)
-    return true
+    return !esBorradorDeSesionFutura(f)
   })
   return exito(filas.map(deFila))
 }
@@ -244,13 +261,14 @@ export async function getMesesConFacturas() {
     const { data, error } = await ejecutar(
       supabase
         .from('facturas')
-        .select('fecha_emision, cita:citas (fecha_hora)')
+        .select('fecha_emision, emitida_at, verifactu_id, cita:citas (fecha_hora)')
         .order('fecha_emision', { ascending: false })
         .range(desde, desde + TAMANO_PAGINA - 1),
       'cargar los meses con facturas',
     )
     if (error) return { data: null, error }
-    for (const f of data) meses.add(mesSesionDe(f))
+    // Un mes con sólo borradores de citas futuras saldría vacío en el desplegable
+    for (const f of data) if (!esBorradorDeSesionFutura(f)) meses.add(mesSesionDe(f))
     if (data.length < TAMANO_PAGINA) break
   }
   return exito([...meses].sort((a, b) => b.localeCompare(a)))
