@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { RefreshCw, X } from 'lucide-react'
 
@@ -9,22 +10,68 @@ import { RefreshCw, X } from 'lucide-react'
    un despliegue, el navegador sigue con la versión vieja hasta que se
    recarga — y la PWA instalada casi nunca se cierra.
 
-   Cuando el service worker detecta una versión nueva (al abrir y cada
-   media hora), esto enseña un aviso con botón. «Actualizar» activa el
-   worker nuevo y recarga; la equis lo aparca hasta la próxima.
+   Cuando el service worker detecta una versión nueva (al abrir, al volver
+   a la app y cada media hora), la aplica SOLA en un momento en que no
+   estorba: nada más abrir la app, o al irse a segundo plano. Nunca con
+   una ventana abierta ni mientras se escribe en un campo.
+   Si no es buen momento, enseña un aviso con botón: «Actualizar» activa
+   el worker nuevo y recarga; la equis lo aparca hasta que se vuelva a la
+   app (no para siempre, como antes: así nadie se queda con una versión
+   vieja días sin enterarse).
    ================================================================ */
+const VENTANA_RECIEN_ABIERTA_MS = 20 * 1000
+
+/** ¿Se puede recargar sin que se pierda algo a medio escribir? */
+function esMomentoSeguro() {
+  if (document.querySelector('[role="dialog"]')) return false
+  const activo = document.activeElement?.tagName
+  return !['INPUT', 'TEXTAREA', 'SELECT'].includes(activo)
+}
+
 export default function AvisoVersion() {
+  const [aparcado, setAparcado] = useState(false)
+
   const {
-    needRefresh: [hayVersionNueva, setHayVersionNueva],
+    needRefresh: [hayVersionNueva],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_url, registro) {
       if (!registro) return
-      setInterval(() => registro.update(), 30 * 60 * 1000)
+      const buscar = () => {
+        if (navigator.onLine) registro.update().catch(() => {})
+      }
+      setInterval(buscar, 30 * 60 * 1000)
+      // La PWA instalada casi nunca se cierra: al volver a ella, a mirar
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') buscar()
+      })
     },
   })
 
-  if (!hayVersionNueva) return null
+  useEffect(() => {
+    if (!hayVersionNueva) return
+
+    const aplicar = () => {
+      if (esMomentoSeguro()) updateServiceWorker(true)
+    }
+
+    // Recién abierta (o ya en segundo plano) no hay nada que perder
+    if (
+      document.visibilityState === 'hidden' ||
+      performance.now() < VENTANA_RECIEN_ABIERTA_MS
+    ) {
+      aplicar()
+    }
+
+    const alCambiarVisibilidad = () => {
+      if (document.visibilityState === 'hidden') aplicar()
+      else setAparcado(false)
+    }
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
+    return () => document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+  }, [hayVersionNueva, updateServiceWorker])
+
+  if (!hayVersionNueva || aparcado) return null
 
   return (
     <div
@@ -43,7 +90,7 @@ export default function AvisoVersion() {
         Actualizar
       </button>
       <button
-        onClick={() => setHayVersionNueva(false)}
+        onClick={() => setAparcado(true)}
         aria-label="Ahora no"
         className="shrink-0 rounded-full p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
       >

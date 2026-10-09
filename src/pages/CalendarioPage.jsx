@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock,
   HeartHandshake,
+  RefreshCw,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Cabecera from '../components/layout/Cabecera'
@@ -22,7 +23,10 @@ import CitaModal from '../features/agenda/CitaModal'
 import { LeyendaConfirmacion, LeyendaTipos } from '../features/agenda/TipoCitaBadge'
 import { useCitas } from '../hooks/useCitas'
 import { useListaEspera } from '../hooks/useListaEspera'
+import { useRefrescoAutomatico } from '../hooks/useRefrescoAutomatico'
 import { contarEventosPendientes } from '../services/eventosPendientes'
+import { getConfigGoogle } from '../services/ajustes'
+import { traerCambiosDeGoogle } from '../services/googleCalendar'
 import { esperasDe } from '../lib/espera'
 import {
   aClave,
@@ -65,6 +69,11 @@ export default function CalendarioPage() {
       vivo = false
     }
   }, [])
+  useRefrescoAutomatico(() => {
+    contarEventosPendientes().then(({ data }) => {
+      if (data !== null && data !== undefined) setPorRevisar(data)
+    })
+  })
 
   /* La cita ya está guardada en Supabase; `aviso` sólo llega si Google
      Calendar no aceptó el cambio, y entonces se avisa sin alarmar. */
@@ -94,6 +103,30 @@ export default function CalendarioPage() {
   }, [vista, dias, referencia])
 
   const { citasPorDia, cargando, error, recargar } = useCitas(desde, hasta)
+
+  /* «Actualizar»: el sondeo de Google va cada 10 minutos; esto es para no
+     esperar. Primero se trae lo de Google (si está conectado) y luego se
+     vuelve a leer la agenda. Si Google falla, la agenda se recarga igual. */
+  const [actualizando, setActualizando] = useState(false)
+  const actualizar = async () => {
+    setActualizando(true)
+    let fallo = null
+    const { data: config } = await getConfigGoogle({ refrescar: true })
+    if (config?.conectado) {
+      const { error: errorGoogle } = await traerCambiosDeGoogle()
+      fallo = errorGoogle
+    }
+    await recargar({ silencioso: true })
+    contarEventosPendientes().then(({ data }) => setPorRevisar(data ?? 0))
+    setActualizando(false)
+    if (fallo) {
+      setAviso({
+        tipo: 'error',
+        titulo: 'No se ha podido consultar Google Calendar',
+        detalle: fallo.mensaje,
+      })
+    }
+  }
 
   /* La lista de espera. Aquí sólo interesa una cosa: si una cancelación
      ha dejado un hueco que alguien estaba esperando. */
@@ -200,6 +233,18 @@ export default function CalendarioPage() {
             <p className="text-lg font-semibold text-tinta first-letter:uppercase">
               {titulo}
             </p>
+            <button
+              onClick={actualizar}
+              disabled={actualizando}
+              aria-label="Actualizar la agenda"
+              title="Actualizar (trae también lo último de Google Calendar)"
+              className="rounded-xl p-2 text-tinta-suave transition-colors hover:bg-crema hover:text-tinta disabled:pointer-events-none"
+            >
+              <RefreshCw
+                className={`size-5 ${actualizando ? 'animate-spin' : ''}`}
+                strokeWidth={1.9}
+              />
+            </button>
           </div>
 
           <Segmentado opciones={VISTAS} valor={vista} alCambiar={setVista} />

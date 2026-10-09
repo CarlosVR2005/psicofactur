@@ -189,11 +189,17 @@ export async function eliminarCita(cita) {
  * Hoy sirve para que la agenda se refresque sola si se toca desde otro
  * dispositivo; mañana será el webhook de WhatsApp cambiando
  * `estado_confirmacion` quien dispare esto.
+ *
+ * Realtime no repite lo que pasó mientras la conexión estaba caída (móvil
+ * en segundo plano, portátil dormido, corte de red). Por eso `alConectar`
+ * se llama cada vez que el canal queda suscrito —la primera vez y en cada
+ * reconexión—: es el momento de volver a pedir los datos para recuperar lo
+ * que se haya perdido por el camino.
  * @returns función para darse de baja
  */
 let numeroCanal = 0
 
-export function suscribirCitas(alCambiar) {
+export function suscribirCitas(alCambiar, alConectar) {
   // Nombre único por suscripción: varias pantallas pueden escuchar a la vez
   const canal = supabase
     .channel(`citas-en-vivo-${++numeroCanal}`)
@@ -202,7 +208,12 @@ export function suscribirCitas(alCambiar) {
       { event: '*', schema: 'public', table: 'citas' },
       (payload) => alCambiar(payload),
     )
-    .subscribe()
+    .subscribe((estado) => {
+      if (estado === 'SUBSCRIBED') alConectar?.()
+      else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') {
+        console.warn(`[Psicofactur] canal de citas en vivo: ${estado} (reintenta solo)`)
+      }
+    })
 
   return () => {
     supabase.removeChannel(canal)

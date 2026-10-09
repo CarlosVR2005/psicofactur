@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getFacturas, getFacturasDePaciente } from '../services/facturas'
+import { useRefrescoAutomatico } from './useRefrescoAutomatico'
 
 /**
  * @param {string|null} pacienteId  si viene, las facturas de ese paciente
@@ -11,19 +12,24 @@ export function useFacturas(pacienteId = null, mes = null) {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
-    const { data, error: fallo } = pacienteId
-      ? await getFacturasDePaciente(pacienteId)
-      : await getFacturas({ mes })
-    setError(fallo)
-    if (data) setFacturas(data)
-    setCargando(false)
-  }, [pacienteId, mes])
+  const recargar = useCallback(
+    async ({ silencioso = false } = {}) => {
+      if (!silencioso) setCargando(true)
+      const { data, error: fallo } = pacienteId
+        ? await getFacturasDePaciente(pacienteId)
+        : await getFacturas({ mes })
+      setError(fallo)
+      if (data) setFacturas(data)
+      setCargando(false)
+    },
+    [pacienteId, mes],
+  )
 
   useEffect(() => {
     recargar()
   }, [recargar])
+
+  useRefrescoAutomatico(() => recargar({ silencioso: true }))
 
   /** Mete o actualiza una factura en la lista sin volver a consultar */
   const aplicarCambio = useCallback((factura) => {

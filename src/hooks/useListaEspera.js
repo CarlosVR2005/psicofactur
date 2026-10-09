@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getHuecosLibres, getListaEspera } from '../services/listaEspera'
+import { suscribirCitas } from '../services/citas'
+import { useRefrescoAutomatico } from './useRefrescoAutomatico'
 
 /* La cola y los huecos libres van SIEMPRE juntos: por separado ninguno
    de los dos dice nada. Un hueco sin saber quién lo quiere no sirve, y
@@ -10,8 +12,8 @@ export function useListaEspera() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
+  const recargar = useCallback(async ({ silencioso = false } = {}) => {
+    if (!silencioso) setCargando(true)
     const [cola, libres] = await Promise.all([getListaEspera(), getHuecosLibres()])
     setError(cola.error ?? libres.error)
     if (cola.data) setEsperas(cola.data)
@@ -22,6 +24,19 @@ export function useListaEspera() {
   useEffect(() => {
     recargar()
   }, [recargar])
+
+  /* Los huecos libres dependen de las citas: si se cancela o se añade una
+     desde Google, el aviso del calendario tiene que enterarse. */
+  useRefrescoAutomatico(() => recargar({ silencioso: true }))
+
+  useEffect(
+    () =>
+      suscribirCitas(
+        () => recargar({ silencioso: true }),
+        () => recargar({ silencioso: true }),
+      ),
+    [recargar],
+  )
 
   /** Mete o actualiza una espera en la cola sin volver a consultar */
   const aplicarCambio = useCallback((espera) => {

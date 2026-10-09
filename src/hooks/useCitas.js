@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getCitas, getCitasDePaciente, suscribirCitas } from '../services/citas'
 import { aClave, hoy, sumarDias } from '../lib/fechas'
+import { useRefrescoAutomatico } from './useRefrescoAutomatico'
 
 /**
  * Citas de un rango de fechas, con recarga automática en vivo.
@@ -16,12 +17,19 @@ export function useCitas(desde, hasta) {
   const rango = useRef({ desde, hasta })
   rango.current = { desde, hasta }
 
+  // Número de la última petición lanzada. Si dos recargas se solapan (un
+  // aviso en vivo mientras se cambia de semana, por ejemplo), la respuesta
+  // más lenta puede ser la antigua y pisar a la buena: sólo vale la última.
+  const ultimaPeticion = useRef(0)
+
   const recargar = useCallback(async ({ silencioso = false } = {}) => {
+    const miPeticion = ++ultimaPeticion.current
     if (!silencioso) setCargando(true)
     const { data, error: fallo } = await getCitas(
       rango.current.desde,
       rango.current.hasta,
     )
+    if (miPeticion !== ultimaPeticion.current) return
     setError(fallo)
     if (data) setCitas(data)
     setCargando(false)
@@ -31,12 +39,21 @@ export function useCitas(desde, hasta) {
     recargar()
   }, [recargar, desde, hasta])
 
-  // Realtime: si la agenda cambia (otro dispositivo, o mañana el webhook
-  // de WhatsApp), se refresca sola sin recargar la página.
+  // Realtime: si la agenda cambia (otro dispositivo, la sincronización con
+  // Google, el webhook de WhatsApp), se refresca sola sin recargar la
+  // página. Al (re)conectarse el canal se vuelve a pedir todo, porque lo
+  // ocurrido mientras estuvo caído no se repite.
   useEffect(() => {
-    const desuscribir = suscribirCitas(() => recargar({ silencioso: true }))
+    const desuscribir = suscribirCitas(
+      () => recargar({ silencioso: true }),
+      () => recargar({ silencioso: true }),
+    )
     return desuscribir
   }, [recargar])
+
+  // Y por si la conexión en vivo ni siquiera avisa de que se ha caído:
+  // al volver a la app y cada pocos minutos se vuelve a mirar.
+  useRefrescoAutomatico(() => recargar({ silencioso: true }))
 
   /** Agrupadas por día: el calendario pinta a partir de aquí */
   const citasPorDia = useMemo(() => {
@@ -66,18 +83,23 @@ export function useCitasDePaciente(pacienteId) {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
 
-  const recargar = useCallback(async () => {
-    if (!pacienteId) return
-    setCargando(true)
-    const { data, error: fallo } = await getCitasDePaciente(pacienteId)
-    setError(fallo)
-    if (data) setCitas(data)
-    setCargando(false)
-  }, [pacienteId])
+  const recargar = useCallback(
+    async ({ silencioso = false } = {}) => {
+      if (!pacienteId) return
+      if (!silencioso) setCargando(true)
+      const { data, error: fallo } = await getCitasDePaciente(pacienteId)
+      setError(fallo)
+      if (data) setCitas(data)
+      setCargando(false)
+    },
+    [pacienteId],
+  )
 
   useEffect(() => {
     recargar()
   }, [recargar])
+
+  useRefrescoAutomatico(() => recargar({ silencioso: true }))
 
   return { citas, cargando, error, recargar }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getProximasConRecordatorio } from '../services/recordatorios'
 import { suscribirCitas } from '../services/citas'
+import { useRefrescoAutomatico } from './useRefrescoAutomatico'
 
 /**
  * Próximas citas con su estado de confirmación, escuchando en vivo.
@@ -35,7 +36,16 @@ export function useRecordatorios(dias = 7) {
   }, [recargar])
 
   // Cualquier cambio en `citas` (incluido el que provocará el webhook)
-  useEffect(() => suscribirCitas(() => recargar({ silencioso: true })), [recargar])
+  useEffect(
+    () =>
+      suscribirCitas(
+        () => recargar({ silencioso: true }),
+        () => recargar({ silencioso: true }),
+      ),
+    [recargar],
+  )
+
+  useRefrescoAutomatico(() => recargar({ silencioso: true }))
 
   const conteo = useMemo(
     () => ({
