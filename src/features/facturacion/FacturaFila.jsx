@@ -8,6 +8,7 @@ import MetodoPagoBoton from './MetodoPagoBoton'
 import BotonEmitir from './BotonEmitir'
 import BotonPDF from './BotonPDF'
 import BotonEnviarEmail from './BotonEnviarEmail'
+import BotonJustificante from './BotonJustificante'
 import RectificarModal from './RectificarModal'
 import EditarFacturaModal from './EditarFacturaModal'
 import TipoCitaBadge from '../agenda/TipoCitaBadge'
@@ -167,6 +168,7 @@ export default function FacturaFila({
           alCambiar={alCambiar}
           alFallar={alFallar}
         />
+        <BotonJustificante factura={factura} alFallar={alFallar} />
 
         {/* Forma de cobro: chip con icono y texto, bien visible. */}
         <MetodoPagoBoton

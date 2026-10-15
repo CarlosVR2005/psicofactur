@@ -212,7 +212,7 @@ export async function getDatosFiscales() {
 
   const { data, error } = await supabase
     .from('psicologas')
-    .select('nif, razon_social, direccion_fiscal, iban, logo, verifactu_config, verifactu_activo')
+    .select('nombre, numero_colegiado, nif, razon_social, direccion_fiscal, iban, logo, verifactu_config, verifactu_activo')
     .eq('id', id)
     .single()
 
@@ -227,6 +227,9 @@ export async function getDatosFiscales() {
       nif: data?.nif ?? '',
       razonSocial: data?.razon_social ?? '',
       direccionFiscal: data?.direccion_fiscal ?? '',
+      // No van en la factura: los usa el justificante de asistencia
+      nombre: data?.nombre ?? '',
+      numeroColegiado: data?.numero_colegiado ?? '',
       // El IBAN tampoco cuenta para `completo`: si está, sale en la
       // factura como forma de pago; si no, no se muestra ese bloque
       iban: data?.iban ?? '',

@@ -30,7 +30,7 @@ const COLUMNAS = `
   verifactu_id, verifactu_estado, verifactu_error, verifactu_qr_url, verifactu_hash,
   emitida_at, email_enviado_at, email_destinatario,
   paciente:pacientes (id, nombre, dni, correo, tipo_cliente, empresa_razon_social, empresa_cif, empresa_domicilio),
-  cita:citas (id, fecha_hora, tipo),
+  cita:citas (id, fecha_hora, duracion_minutos, tipo),
   rectificada:facturas!factura_rectificada_id (numero_factura)
 `
 
@@ -67,6 +67,8 @@ function deFila(fila) {
     horaSesion: sesion
       ? `${String(sesion.getHours()).padStart(2, '0')}:${String(sesion.getMinutes()).padStart(2, '0')}`
       : null,
+    // Para el justificante de asistencia («de 10:00 a 10:55»)
+    duracionSesion: fila.cita?.duracion_minutos ?? null,
     tipoSesion: fila.cita?.tipo ?? null,
     /* `importe` = lo que cobra de verdad la consulta = líquido (base +
        IGIC − IRPF). En las facturas de siempre —sesión exenta a un

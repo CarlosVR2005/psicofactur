@@ -85,7 +85,7 @@ const LOGO_ALTO_MAX_MEMBRETE = 38
  * @param {{anchoMax?: number, altoMax?: number, centrarEnBanda?: boolean}} opciones
  *   `centrarEnBanda` centra el logo en la altura de la banda del QR.
  */
-function dibujarLogo(doc, logo, y, opciones = {}) {
+export function dibujarLogo(doc, logo, y, opciones = {}) {
   const {
     anchoMax = LOGO_ANCHO_MAX,
     altoMax = LOGO_ALTO_MAX,
@@ -440,8 +440,11 @@ function esTactilSinRaton() {
  */
 export async function descargarFacturaPDF({ factura, emisor, destinatario }) {
   const doc = await construirFacturaPDF({ factura, emisor, destinatario })
-  const nombre = nombreFicheroFactura(factura)
+  await entregarPDF(doc, nombreFicheroFactura(factura))
+}
 
+/** Descarga o comparte un PDF ya dibujado (lo usa también el justificante). */
+export async function entregarPDF(doc, nombre) {
   if (esTactilSinRaton()) {
     const fichero = new File([doc.output('blob')], nombre, { type: 'application/pdf' })
     if (navigator.canShare?.({ files: [fichero] })) {
